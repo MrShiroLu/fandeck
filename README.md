@@ -22,11 +22,11 @@ The name comes from the fan decks painters use to pick paint colors.
 
 ## Screenshots
 
-| Collage | Schedule | Setup |
-| --- | --- | --- |
-| ![Collage page](docs/screenshots/collage.png) | ![Schedule page](docs/screenshots/schedule.png) | ![Setup page](docs/screenshots/setup.png) |
+![Collage page](docs/screenshots/collage.png)
 
-The wallpapers in these screenshots are generated demo images.
+![Schedule page](docs/screenshots/schedule.png)
+
+![Setup page](docs/screenshots/setup.png)
 
 ## Requirements
 
