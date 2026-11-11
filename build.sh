@@ -1,7 +1,15 @@
 #!/bin/sh
-# Builds build/Fandeck.app. With --install, also copies it to /Applications
+# Builds build/Fandeck.app. With --install, also copies it to /Applications. With test, runs the logic tests
 set -e
 cd "$(dirname "$0")"
+
+if [ "$1" = "test" ]; then
+    mkdir -p build
+    swiftc -swift-version 5 -parse-as-library -target arm64-apple-macos14 \
+        $(ls app/*.swift | grep -v FandeckApp.swift) tests/*.swift -o build/tests
+    exec build/tests build/test-output
+fi
+
 APP=build/Fandeck.app
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
