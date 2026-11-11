@@ -48,12 +48,23 @@ final class SetupModel: ObservableObject {
     @Published var wal: URL?
     @Published var kittyFound = false
     @Published var kittyLinked = false
+    @Published var ghosttyFound = false
+    @Published var ghosttyLinked = false
     @Published var hasPalette = false
     @Published var loginStatus = SMAppService.mainApp.status
     @Published var running: String?
     @Published var log = ""
 
     static let kittyConf = home.appendingPathComponent(".config/kitty/kitty.conf")
+    static let ghosttyColors = walCache.appendingPathComponent("ghostty.conf")
+
+    /// Ghostty reads any of these; edit the one that exists, or start the XDG one that every version reads
+    static var ghosttyConf: URL {
+        let candidates = [".config/ghostty/config.ghostty", ".config/ghostty/config",
+                          "Library/Application Support/com.mitchellh.ghostty/config.ghostty",
+                          "Library/Application Support/com.mitchellh.ghostty/config"].map(home.appendingPathComponent)
+        return candidates.first { FileManager.default.fileExists(atPath: $0.path) } ?? candidates[1]
+    }
     static var isReady: Bool { Tools.find("python3") != nil && Tools.findMagick() != nil && Tools.find("wal") != nil }
     var inApplications: Bool { Installer.inApplications }
 
@@ -68,6 +79,10 @@ final class SetupModel: ObservableObject {
         kittyLinked = conf.contains("colors-kitty.conf")
         kittyFound = kittyLinked || FileManager.default.fileExists(atPath: "/Applications/kitty.app")
             || Tools.find("kitty") != nil || FileManager.default.fileExists(atPath: Self.kittyConf.path)
+        let ghostty = (try? String(contentsOf: Self.ghosttyConf, encoding: .utf8)) ?? ""
+        ghosttyLinked = ghostty.contains(Self.ghosttyColors.path)
+        ghosttyFound = ghosttyLinked || FileManager.default.fileExists(atPath: "/Applications/Ghostty.app")
+            || Tools.find("ghostty") != nil || FileManager.default.fileExists(atPath: Self.ghosttyConf.path)
         hasPalette = FileManager.default.fileExists(atPath: walCache.appendingPathComponent("colors.json").path)
         loginStatus = SMAppService.mainApp.status
     }
@@ -98,23 +113,41 @@ final class SetupModel: ObservableObject {
     }
 
     func linkKitty() {
+        // First, so the user's own settings such as opacity still override it
+        addToConfig(Self.kittyConf, "include ~/.cache/wal/colors-kitty.conf", atTop: true)
+    }
+
+    func linkGhostty() {
+        // Ghostty loads config-file after the rest of the file, so its place doesn't matter. The ? skips it if missing.
+        addToConfig(Self.ghosttyConf, "config-file = ?\(Self.ghosttyColors.path)", atTop: false)
+    }
+
+    /// The config text with Fandeck's commented line added, separated from the rest by a blank line
+    nonisolated static func adding(_ line: String, to old: String, atTop: Bool) -> String {
+        let block = "# Fandeck: colors generated from the wallpaper\n\(line)\n"
+        if atTop { return block + "\n" + old }
+        let gap = old.isEmpty || old.hasSuffix("\n\n") ? "" : old.hasSuffix("\n") ? "\n" : "\n\n"
+        return old + gap + block
+    }
+
+    /// Adds Fandeck's line to a terminal config and keeps a backup of the old file
+    private func addToConfig(_ conf: URL, _ line: String, atTop: Bool) {
+        let name = conf.lastPathComponent
         do {
             let fm = FileManager.default
-            try fm.createDirectory(at: Self.kittyConf.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try fm.createDirectory(at: conf.deletingLastPathComponent(), withIntermediateDirectories: true)
             var old = ""
-            if fm.fileExists(atPath: Self.kittyConf.path) {
-                old = try String(contentsOf: Self.kittyConf, encoding: .utf8)
-                let backup = Self.kittyConf.appendingPathExtension("fandeck-backup")
+            if fm.fileExists(atPath: conf.path) {
+                old = try String(contentsOf: conf, encoding: .utf8)
+                let backup = conf.appendingPathExtension("fandeck-backup")
                 try? fm.removeItem(at: backup)
-                try fm.copyItem(at: Self.kittyConf, to: backup)
+                try fm.copyItem(at: conf, to: backup)
             }
-            // Put it first so the user's own settings (opacity etc.) can still override it.
-            // Not atomic, so a dotfiles symlink stays a symlink.
-            let line = "# Fandeck: colors generated from the wallpaper\ninclude ~/.cache/wal/colors-kitty.conf\n\n"
-            try (line + old).write(to: Self.kittyConf, atomically: false, encoding: .utf8)
-            log = "Updated kitty.conf." + (old.isEmpty ? "" : " The old file is saved as kitty.conf.fandeck-backup.")
+            // Not atomic, so a dotfiles symlink stays a symlink
+            try Self.adding(line, to: old, atTop: atTop).write(to: conf, atomically: false, encoding: .utf8)
+            log = "Updated \(conf.tildePath)." + (old.isEmpty ? "" : " The old file is saved as \(name).fandeck-backup.")
         } catch {
-            log = "Could not write kitty.conf: \(error.localizedDescription)"
+            log = "Could not write \(name): \(error.localizedDescription)"
         }
         refresh()
     }
@@ -188,6 +221,12 @@ struct SetupView: View {
                             : setup.kittyFound ? "Adds an include line to the top of kitty.conf and keeps a backup"
                             : "kitty not found") {
                     if setup.kittyFound && !setup.kittyLinked { Button("Connect") { setup.linkKitty() } }
+                }
+                SetupRow(state: setup.ghosttyLinked ? .ok : setup.ghosttyFound ? .missing : .optional, title: "Ghostty",
+                         detail: setup.ghosttyLinked ? "Ghostty config loads the wal colors"
+                            : setup.ghosttyFound ? "Adds a config-file line to the Ghostty config and keeps a backup"
+                            : "Ghostty not found") {
+                    if setup.ghosttyFound && !setup.ghosttyLinked { Button("Connect") { setup.linkGhostty() } }
                 }
                 SetupRow(state: .ok, title: "macOS accent color", detail: accentDetail) { EmptyView() }
             }

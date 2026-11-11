@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Match colors to the wallpaper: pywal palette -> kitty, macOS accent and highlight colors."""
+"""Match colors to the wallpaper: pywal palette -> kitty, Ghostty, macOS accent and highlight colors."""
 import colorsys
 import fcntl
 import json
@@ -87,9 +87,11 @@ def set_wallpaper_everywhere(path):
     subprocess.run(["killall", "WallpaperAgent"], capture_output=True)
 
 
-def reload_kitty():
+def reload_terminals():
     # On SIGUSR1 kitty reloads kitty.conf, including the wal colors it includes
     subprocess.run(["pkill", "-USR1", "-x", "kitty"])
+    # Ghostty reloads its config, and the wal colors file it loads, on SIGUSR2
+    subprocess.run(["pkill", "-USR2", "-ix", "ghostty"])
 
 
 def main():
@@ -119,7 +121,7 @@ def main():
     colors = json.loads((WAL_CACHE / "colors.json").read_text())["colors"]
     accent_hex = pick_accent(colors)
     accent = set_macos_colors(accent_hex)
-    reload_kitty()
+    reload_terminals()
     print(f"Accent {accent_hex}, closest macOS color: {ACCENT_NAMES[accent]}")
     return 0
 
