@@ -34,6 +34,7 @@ struct Tests {
         try! FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
 
         schedule()
+        shuffle()
         collageLayouts()
         files(in: dir)
 
@@ -64,6 +65,25 @@ struct Tests {
         let state = ScheduleState(enabled: true, rules: [ScheduleRule(days: [1, 7], hour: 22, minute: 5, path: "/a b.png")])
         let back = try! JSONDecoder().decode(ScheduleState.self, from: JSONEncoder().encode(state))
         check(back.rules == state.rules && back.enabled, "schedule survives a JSON round trip")
+    }
+
+    static func shuffle() {
+        let urls = (1...12).map { URL(fileURLWithPath: "/w/\($0).jpg") }
+        let history = Array(urls[6...11])
+        var picks = Set<URL>()
+        for _ in 0..<300 { if let u = Shuffle.pick(from: urls, current: urls[11], history: history) { picks.insert(u) } }
+        check(!picks.contains(urls[11]), "shuffle never picks the current wallpaper")
+        check(picks.isDisjoint(with: urls[7...11]), "shuffle skips the last five shown when there are 12 images")
+        check(picks == Set(urls[0...6]), "shuffle still reaches every other image")
+        let two = Array(urls[0...1])
+        check(Shuffle.pick(from: two, current: two[0], history: two) == two[1], "with two images shuffle alternates")
+        check(Shuffle.pick(from: [urls[0]], current: urls[0], history: []) == nil, "with one image there is nothing to shuffle to")
+
+        var h: [URL] = []
+        for u in urls + urls + urls { h = Shuffle.appending(u, to: h) }
+        check(h.count == Shuffle.historyLimit && h.last == urls[11], "history keeps the newest \(Shuffle.historyLimit) entries")
+        check(Shuffle.appending(urls[11], to: h) == h, "the same wallpaper twice in a row is stored once")
+        check(Shuffle.label(60) == "hour" && Shuffle.label(1440) == "day", "interval labels read as \"every hour\", \"every day\"")
     }
 
     static func collageLayouts() {
