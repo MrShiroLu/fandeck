@@ -2,9 +2,9 @@
 
 <h1 align="center">Fandeck</h1>
 
-<p align="center">A macOS app that sets your wallpaper and matches the kitty terminal and the system accent color to it.</p>
+<p align="center">A macOS app that sets your wallpaper and matches your terminal and the system accent color to it.</p>
 
-Fandeck uses [pywal16](https://github.com/eylles/pywal16) to pull a palette out of the wallpaper. When you pick an image, Fandeck sets it on every Space, generates a 16 color palette, reloads kitty with that palette and sets the macOS accent and text highlight colors to match. The app window takes on the same colors.
+Fandeck uses [pywal16](https://github.com/eylles/pywal16) to pull a palette out of the wallpaper. When you pick an image, Fandeck sets it on every Space, generates a 16 color palette, reloads kitty or Ghostty with that palette and sets the macOS accent and text highlight colors to match. The app window takes on the same colors.
 
 The name comes from the fan decks painters use to pick paint colors.
 
@@ -18,8 +18,9 @@ The name comes from the fan decks painters use to pick paint colors.
 - Schedule: change the wallpaper by day and time, for example a light image on weekday mornings and a dark one every evening. A rule stays in effect until the next rule fires. If the Mac was asleep when a rule was due, it runs on wake.
 - Timed shuffle: pick a random image every 15 minutes, every hour or up to once a day. It skips the images shown recently, and choosing a wallpaper yourself restarts the countdown.
 - System Settings sync: if you change the wallpaper in System Settings, Fandeck updates the colors to match.
+- Keyboard shortcuts: ⌃⌥⌘N shuffles and ⌃⌥⌘P goes back, from any app. You can change or turn them off on the Setup page.
 - Menu bar: shuffle, go back to the previous wallpaper, regenerate colors or turn the timed shuffle and the schedule on and off. Closing the window leaves Fandeck running in the menu bar.
-- Setup page: checks for Homebrew, Python, ImageMagick and pywal16 and installs what is missing. It also connects kitty and controls open at login.
+- Setup page: checks for Homebrew, Python, ImageMagick and pywal16 and installs what is missing. It also connects kitty and Ghostty and controls open at login.
 
 ## Screenshots
 
@@ -58,24 +59,32 @@ python3 fandeck.py --set ~/Pictures/some-wallpaper.jpg
 
 Without `--set` the script only updates the colors. Without a path it uses the current wallpaper.
 
-## kitty
+## Terminals
 
-The Setup page adds this line to the top of `~/.config/kitty/kitty.conf` and keeps a backup of the old file:
+The Connect buttons on the Setup page add one line to the terminal's config and keep a backup of the old file next to it.
+
+For kitty the line goes at the top of `~/.config/kitty/kitty.conf`, so settings further down, such as `background_opacity`, still take effect:
 
 ```conf
 include ~/.cache/wal/colors-kitty.conf
 ```
 
-Settings further down in your config, such as `background_opacity`, still take effect. Fandeck sends kitty a `SIGUSR1` signal so open windows reload their colors.
+For Ghostty the line goes at the end of the config file Ghostty already uses, or `~/.config/ghostty/config` if there is none. Ghostty loads it after the rest of the file, so the wallpaper colors replace any colors or theme you set there:
+
+```conf
+config-file = ?~/.cache/wal/ghostty.conf
+```
+
+After a new palette, Fandeck sends kitty a `SIGUSR1` signal and Ghostty a `SIGUSR2` signal, and open windows reload their colors.
 
 ## How it works
 
 | File | Role |
 | --- | --- |
-| `fandeck.py` | Runs `wal` on the image, picks the most vivid palette color, maps it to the nearest `AppleAccentColor`, sets a matching `AppleHighlightColor` and notifies running apps of the change. With `--set` it also sets the wallpaper on every Space. |
+| `fandeck.py` | Runs `wal` on the image, reloads kitty and Ghostty, picks the most vivid palette color, maps it to the nearest `AppleAccentColor`, sets a matching `AppleHighlightColor` and notifies running apps of the change. With `--set` it also sets the wallpaper on every Space. |
 | `app/` | The SwiftUI app. It runs the bundled script, watches the wallpaper store to catch changes made in System Settings and watches your wallpaper folders for new images. |
 | `tools/make-icon.swift` | Draws the app icon with CoreGraphics. `tools/make-icon.sh` turns the drawing into `AppIcon.icns`. |
-| `tests/` | Logic tests for the schedule, shuffle and history, collage layouts, thumbnails, folder scanning and file watching. Run them with `./build.sh test`. |
+| `tests/` | Logic tests for the schedule, shuffle and history, shortcuts, terminal config edits, collage layouts, thumbnails, folder scanning and file watching. Run them with `./build.sh test`. |
 
 `NSWorkspace.setDesktopImageURL` only changes the wallpaper of the current Space. To cover every Space, `fandeck.py --set` writes the same entry that the "Show on all Spaces" option in System Settings writes, in `~/Library/Application Support/com.apple.wallpaper/Store/Index.plist`. It then restarts `WallpaperAgent` to load the change.
 
@@ -96,7 +105,7 @@ rm -rf /Applications/Fandeck.app ~/Library/Application\ Support/Fandeck
 defaults delete com.vyke.fandeck
 ```
 
-To undo the kitty change, delete the two Fandeck lines at the top of `~/.config/kitty/kitty.conf` or restore `kitty.conf.fandeck-backup` from the same folder. The accent color stays as it was last set. You can pick another one in System Settings › Appearance.
+To undo the terminal changes, delete the two Fandeck lines from `kitty.conf` or the Ghostty config, or restore the `.fandeck-backup` file next to it. The accent color stays as it was last set. You can pick another one in System Settings › Appearance.
 
 ## License
 
