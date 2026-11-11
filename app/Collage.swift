@@ -192,7 +192,6 @@ struct CollageView: View {
 
     private var controls: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Collage").font(.title2.weight(.semibold))
             VStack(alignment: .leading, spacing: 6) {
                 Text("Layout").font(.caption).opacity(0.6)
                 Picker("Layout", selection: $model.collage.layout) {

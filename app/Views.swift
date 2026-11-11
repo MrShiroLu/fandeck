@@ -219,7 +219,7 @@ struct GalleryView: View {
                     Button { model.applyRandom() } label: { Label("Shuffle", systemImage: "shuffle") }
                 }
                 .disabled(model.busy)
-                Text(model.status.isEmpty ? "Tip: drop an image anywhere on this window." : model.status)
+                Text(model.status.isEmpty ? "Drop an image anywhere on this window to use it." : model.status)
                     .font(.caption).opacity(0.5).lineLimit(3)
             }
             Spacer(minLength: 0)

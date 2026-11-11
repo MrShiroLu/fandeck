@@ -89,11 +89,8 @@ struct ScheduleView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             HStack(alignment: .firstTextBaseline, spacing: 12) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Schedule").font(.title2.weight(.semibold))
-                    Text("Switch wallpapers on chosen days and times. Each rule holds until the next one fires.")
-                        .font(.callout).opacity(0.65)
-                }
+                Text("Switch wallpapers on chosen days and times. Each rule holds until the next one fires.")
+                    .font(.callout).opacity(0.65)
                 Spacer()
                 Toggle("Enabled", isOn: $model.scheduleEnabled).toggleStyle(.switch)
                 Button { model.addRule() } label: { Label("Add Rule", systemImage: "plus") }

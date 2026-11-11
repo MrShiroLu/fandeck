@@ -50,12 +50,10 @@ final class SetupModel: ObservableObject {
     @Published var kittyLinked = false
     @Published var hasPalette = false
     @Published var loginStatus = SMAppService.mainApp.status
-    @Published var oldAgent = false
     @Published var running: String?
     @Published var log = ""
 
     static let kittyConf = home.appendingPathComponent(".config/kitty/kitty.conf")
-    static let oldAgentPlist = home.appendingPathComponent("Library/LaunchAgents/com.vyke.wallmatch.plist")
     static var isReady: Bool { Tools.find("python3") != nil && Tools.findMagick() != nil && Tools.find("wal") != nil }
     var inApplications: Bool { Installer.inApplications }
 
@@ -72,7 +70,6 @@ final class SetupModel: ObservableObject {
             || Tools.find("kitty") != nil || FileManager.default.fileExists(atPath: Self.kittyConf.path)
         hasPalette = FileManager.default.fileExists(atPath: walCache.appendingPathComponent("colors.json").path)
         loginStatus = SMAppService.mainApp.status
-        oldAgent = FileManager.default.fileExists(atPath: Self.oldAgentPlist.path)
     }
 
     func run(_ id: String, _ script: String) {
@@ -115,7 +112,7 @@ final class SetupModel: ObservableObject {
             // Not atomic, so a dotfiles symlink stays a symlink.
             let line = "# Fandeck: colors generated from the wallpaper\ninclude ~/.cache/wal/colors-kitty.conf\n\n"
             try (line + old).write(to: Self.kittyConf, atomically: false, encoding: .utf8)
-            log = "Updated kitty.conf" + (old.isEmpty ? "" : " (backup: kitty.conf.fandeck-backup)")
+            log = "Updated kitty.conf." + (old.isEmpty ? "" : " The old file is saved as kitty.conf.fandeck-backup.")
         } catch {
             log = "Could not write kitty.conf: \(error.localizedDescription)"
         }
@@ -188,12 +185,11 @@ struct SetupView: View {
             Section("Integrations") {
                 SetupRow(state: setup.kittyLinked ? .ok : setup.kittyFound ? .missing : .optional, title: "kitty",
                          detail: setup.kittyLinked ? "kitty.conf includes the wal colors"
-                            : setup.kittyFound ? "Adds an include line to the top of kitty.conf (a backup is kept)"
+                            : setup.kittyFound ? "Adds an include line to the top of kitty.conf and keeps a backup"
                             : "kitty not found") {
                     if setup.kittyFound && !setup.kittyLinked { Button("Connect") { setup.linkKitty() } }
                 }
-                SetupRow(state: .ok, title: "macOS accent color",
-                         detail: "Folders, selections and buttons take the system color closest to the wallpaper") { EmptyView() }
+                SetupRow(state: .ok, title: "macOS accent color", detail: accentDetail) { EmptyView() }
             }
 
             Section("App") {
@@ -215,15 +211,6 @@ struct SetupView: View {
                 SetupRow(state: model.followSystem ? .ok : .optional, title: "Follow System Settings",
                          detail: "Re-match colors when the wallpaper is changed outside the app") {
                     Toggle("", isOn: $model.followSystem).labelsHidden().toggleStyle(.switch)
-                }
-                if setup.oldAgent {
-                    SetupRow(state: .missing, title: "Old LaunchAgent",
-                             detail: "No longer needed, the app does the same job") {
-                        actionButton("Remove", id: "agent") {
-                            let path = SetupModel.oldAgentPlist.path
-                            setup.run("agent", "launchctl bootout gui/$(id -u) '\(path)' 2>/dev/null; rm -f '\(path)'")
-                        }
-                    }
                 }
             }
 
@@ -250,10 +237,18 @@ struct SetupView: View {
 
     private var loginDetail: String {
         switch setup.loginStatus {
-        case .enabled: "Starts quietly in the menu bar when you log in"
+        case .enabled: "Starts in the menu bar when you log in"
         case .requiresApproval: "Approve it in System Settings › Login Items"
         default: setup.inApplications ? "Keeps the schedule and System Settings sync running" : "Install to Applications first"
         }
+    }
+
+    /// Reads the current accent so the row reports a real value
+    private var accentDetail: String {
+        let names = [-1: "Graphite", 0: "Red", 1: "Orange", 2: "Yellow", 3: "Green", 4: "Blue", 5: "Purple", 6: "Pink"]
+        let value = UserDefaults.standard.object(forKey: "AppleAccentColor") as? Int
+        let name = value.flatMap { names[$0] } ?? "Multicolor"
+        return "Currently \(name), the system color closest to the wallpaper"
     }
 
     private func actionButton(_ title: String, id: String, action: @escaping () -> Void) -> some View {
@@ -310,7 +305,7 @@ struct FolderList: View {
                     Button { NSWorkspace.shared.open(folder) } label: { Image(systemName: "arrow.up.forward.app") }
                         .buttonStyle(.borderless).help("Show in Finder")
                     Button { model.folders.remove(at: i) } label: { Image(systemName: "minus.circle") }
-                        .buttonStyle(.borderless).help("Remove from list (files are kept)")
+                        .buttonStyle(.borderless).help("Remove from the list. The files stay on disk.")
                 }
             }
             if model.folders.isEmpty { Text("No folders.").opacity(0.6) }
