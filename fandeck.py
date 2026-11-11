@@ -1,4 +1,4 @@
-#!/opt/homebrew/bin/python3
+#!/usr/bin/env python3
 """Match colors to the wallpaper: pywal palette -> kitty, macOS accent and highlight colors."""
 import colorsys
 import fcntl
