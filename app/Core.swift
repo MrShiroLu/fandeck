@@ -155,6 +155,37 @@ final class FileWatcher {
     }
 }
 
+/// Watches folders and their subfolders, so images added or removed in Finder show up without a rescan
+final class FolderWatcher {
+    private var stream: FSEventStreamRef?
+    private let onChange: () -> Void
+
+    init(folders: [URL], onChange: @escaping () -> Void) {
+        self.onChange = onChange
+        guard !folders.isEmpty else { return }
+        var context = FSEventStreamContext(version: 0, info: Unmanaged.passUnretained(self).toOpaque(),
+                                           retain: nil, release: nil, copyDescription: nil)
+        let callback: FSEventStreamCallback = { _, info, _, _, _, _ in
+            guard let info else { return }
+            Unmanaged<FolderWatcher>.fromOpaque(info).takeUnretainedValue().onChange()
+        }
+        // One second of latency coalesces a copy of many files into one callback
+        guard let s = FSEventStreamCreate(nil, callback, &context, folders.map(\.path) as CFArray,
+                                          FSEventStreamEventId(kFSEventStreamEventIdSinceNow), 1.0,
+                                          FSEventStreamCreateFlags(kFSEventStreamCreateFlagNone)) else { return }
+        FSEventStreamSetDispatchQueue(s, .main)
+        FSEventStreamStart(s)
+        stream = s
+    }
+
+    deinit {
+        guard let stream else { return }
+        FSEventStreamStop(stream)
+        FSEventStreamInvalidate(stream)
+        FSEventStreamRelease(stream)
+    }
+}
+
 // MARK: - Image loading
 
 /// QuickLook fails to thumbnail some large PNGs; ImageIO handles all of them

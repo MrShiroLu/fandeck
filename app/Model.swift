@@ -22,6 +22,7 @@ final class AppModel: ObservableObject {
     @Published var folders: [URL] {
         didSet {
             UserDefaults.standard.set(folders.map(\.path), forKey: "folders")
+            watchFolders()
             scan()
         }
     }
@@ -40,6 +41,7 @@ final class AppModel: ObservableObject {
     }
 
     private var watcher: FileWatcher?
+    private var folderWatcher: FolderWatcher?
     private var timer: Timer?
     private var scanTask: Task<Void, Never>?
 
@@ -59,6 +61,7 @@ final class AppModel: ObservableObject {
         tab = SetupModel.isReady ? UserDefaults.standard.string(forKey: "page").flatMap(Page.init) ?? .gallery : .setup
         reload()
         updateWatcher()
+        watchFolders()
         startTimer()
     }
 
@@ -80,6 +83,12 @@ final class AppModel: ObservableObject {
                 wallpapers = found
                 scanning = false
             }
+        }
+    }
+
+    private func watchFolders() {
+        folderWatcher = FolderWatcher(folders: folders) { [weak self] in
+            Task { @MainActor in self?.scan() }
         }
     }
 
