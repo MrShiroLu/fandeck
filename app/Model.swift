@@ -15,6 +15,7 @@ final class AppModel: ObservableObject {
     @Published var current: URL?
     @Published var palette = Palette.load()
     @Published var wallpapers: [URL] = []
+    @Published var scanning = false
     @Published var busy = false
     @Published var status = ""
     @Published var folders: [URL] {
@@ -39,6 +40,7 @@ final class AppModel: ObservableObject {
 
     private var watcher: FileWatcher?
     private var timer: Timer?
+    private var scanTask: Task<Void, Never>?
 
     /// The first folder: imported images and collages are saved here
     var library: URL { folders.first ?? defaultLibrary }
@@ -65,7 +67,22 @@ final class AppModel: ObservableObject {
         scan()
     }
 
+    /// Scans off the main thread: reading ~/Downloads can block on the macOS privacy prompt,
+    /// and doing that on the main thread froze the whole app until the prompt was answered
     func scan() {
+        let folders = self.folders
+        scanTask?.cancel()
+        scanning = true
+        scanTask = Task {
+            let found = await Task.detached(priority: .userInitiated) { Self.listImages(in: folders) }.value
+            if !Task.isCancelled {
+                wallpapers = found
+                scanning = false
+            }
+        }
+    }
+
+    nonisolated static func listImages(in folders: [URL]) -> [URL] {
         let keys: [URLResourceKey] = [.contentModificationDateKey]
         var seen = Set<String>()
         var files: [(url: URL, date: Date)] = []
@@ -77,7 +94,7 @@ final class AppModel: ObservableObject {
                 files.append((url, date))
             }
         }
-        wallpapers = files.sorted { $0.date > $1.date }.map(\.url)
+        return files.sorted { $0.date > $1.date }.map(\.url)
     }
 
     func chooseFolders() {

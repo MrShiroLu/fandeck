@@ -151,8 +151,14 @@ struct GalleryView: View {
                     }
             }
             if model.wallpapers.isEmpty {
-                Text("No images in these folders. Add a folder, or drop an image onto the window.")
-                    .opacity(0.6).frame(maxWidth: .infinity, minHeight: 120)
+                Group {
+                    if model.scanning {
+                        Text("Loading wallpapers… If macOS asks for access to your folders, click Allow.")
+                    } else {
+                        Text("No images in these folders. Add a folder, or drop an image onto the window.")
+                    }
+                }
+                .opacity(0.6).frame(maxWidth: .infinity, minHeight: 120)
             }
             gallery
         }
