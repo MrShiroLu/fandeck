@@ -1,4 +1,4 @@
-<p align="center"><img src="docs/icon.png" width="128" alt="Fandeck icon"></p>
+<p align="center"><img src="docs/icon.png" width="160" alt="Fandeck icon"></p>
 
 <h1 align="center">Fandeck</h1>
 
@@ -7,6 +7,8 @@
 Fandeck uses [pywal16](https://github.com/eylles/pywal16) to pull a palette out of the wallpaper. When you pick an image, Fandeck sets it on every Space, generates a 16 color palette, reloads kitty with that palette and sets the macOS accent color to the closest system color. The app window takes on the same colors.
 
 The name comes from the fan decks painters use to pick paint colors.
+
+![The Gallery page](docs/screenshots/gallery.png)
 
 ## Features
 
@@ -17,6 +19,14 @@ The name comes from the fan decks painters use to pick paint colors.
 - System Settings sync: if you change the wallpaper in System Settings, Fandeck updates the colors to match.
 - Menu bar: shuffle the wallpaper, regenerate colors or turn the schedule on and off. Closing the window leaves Fandeck running in the menu bar.
 - Setup page: checks for Homebrew, Python and pywal16 and installs what is missing. It also connects kitty and controls open at login.
+
+## Screenshots
+
+| Collage | Schedule | Setup |
+| --- | --- | --- |
+| ![Collage page](docs/screenshots/collage.png) | ![Schedule page](docs/screenshots/schedule.png) | ![Setup page](docs/screenshots/setup.png) |
+
+The wallpapers in these screenshots are generated demo images.
 
 ## Requirements
 
