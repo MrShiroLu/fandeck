@@ -2,6 +2,7 @@
 import AppKit
 import ImageIO
 import Carbon.HIToolbox
+import SwiftUI
 import UniformTypeIdentifiers
 
 var failures = 0
@@ -38,6 +39,7 @@ struct Tests {
         shuffle()
         shortcuts()
         terminalConfig()
+        palette()
         collageLayouts()
         files(in: dir)
 
@@ -121,6 +123,16 @@ struct Tests {
               "a config with a final newline gets one blank line")
         check(SetupModel.adding("include x", to: "opacity 0.9\n", atTop: true).hasSuffix("\n\nopacity 0.9\n"),
               "kitty's line goes on top, above the user's settings")
+    }
+
+    static func palette() {
+        func make(_ bg: String) -> Palette {
+            let hexes = Array(repeating: "#808080", count: 16)
+            return Palette(background: Color(hex: bg)!, foreground: Color(hex: "#808080")!,
+                           colors: hexes.compactMap(Color.init(hex:)), hexes: hexes)
+        }
+        check(make("#F2EEE8").isLight && !make("#1F0D14").isLight, "a light background makes a light palette, a dark one does not")
+        check(PaletteTheme(rawValue: "auto") == .auto && PaletteTheme.light.label == "Light", "palette styles match the script's --theme values")
     }
 
     static func collageLayouts() {
