@@ -17,6 +17,7 @@ The name comes from the fan decks painters use to pick paint colors.
 - Collage: combine up to 9 images in a grid, feature, column or row layout. You can adjust the spacing, corner radius and background color. Collages are saved at your screen's full resolution.
 - Schedule: change the wallpaper by day and time, for example a light image on weekday mornings and a dark one every evening. A rule stays in effect until the next rule fires. If the Mac was asleep when a rule was due, it runs on wake.
 - Timed shuffle: pick a random image every 15 minutes, every hour or up to once a day. It skips the images shown recently, and choosing a wallpaper yourself restarts the countdown.
+- Palette style: dark, light, or auto, which uses light colors for bright wallpapers. kitty, Ghostty and the app window follow it.
 - System Settings sync: if you change the wallpaper in System Settings, Fandeck updates the colors to match.
 - Keyboard shortcuts: ⌃⌥⌘N shuffles and ⌃⌥⌘P goes back, from any app. You can change or turn them off on the Setup page.
 - Menu bar: shuffle, go back to the previous wallpaper, regenerate colors or turn the timed shuffle and the schedule on and off. Closing the window leaves Fandeck running in the menu bar.
@@ -73,7 +74,7 @@ pipx install pywal16
 python3 fandeck.py --set ~/Pictures/some-wallpaper.jpg
 ```
 
-Without `--set` the script only updates the colors. Without a path it uses the current wallpaper.
+Without `--set` the script only updates the colors. Without a path it uses the current wallpaper. `--theme light` or `--theme auto` picks the palette style, and `--help` lists every option.
 
 ## Terminals
 
@@ -97,10 +98,10 @@ After a new palette, Fandeck sends kitty a `SIGUSR1` signal and Ghostty a `SIGUS
 
 | File | Role |
 | --- | --- |
-| `fandeck.py` | Runs `wal` on the image, reloads kitty and Ghostty, picks the most vivid palette color, maps it to the nearest `AppleAccentColor`, sets a matching `AppleHighlightColor` and notifies running apps of the change. With `--set` it also sets the wallpaper on every Space. |
+| `fandeck.py` | Runs `wal` on the image, in light mode when asked or when the image is bright, reloads kitty and Ghostty, picks the most vivid palette color, maps it to the nearest `AppleAccentColor`, sets a matching `AppleHighlightColor` and notifies running apps of the change. With `--set` it also sets the wallpaper on every Space. |
 | `app/` | The SwiftUI app. It runs the bundled script, watches the wallpaper store to catch changes made in System Settings and watches your wallpaper folders for new images. |
 | `tools/make-icon.swift` | Draws the app icon with CoreGraphics. `tools/make-icon.sh` turns the drawing into `AppIcon.icns`. |
-| `tests/` | Logic tests for the schedule, shuffle and history, shortcuts, terminal config edits, collage layouts, thumbnails, folder scanning and file watching. Run them with `./build.sh test`. |
+| `tests/` | Logic tests for the schedule, shuffle and history, shortcuts, terminal config edits, palette style, collage layouts, thumbnails, folder scanning and file watching. Run them with `./build.sh test`. |
 
 `NSWorkspace.setDesktopImageURL` only changes the wallpaper of the current Space. To cover every Space, `fandeck.py --set` writes the same entry that the "Show on all Spaces" option in System Settings writes, in `~/Library/Application Support/com.apple.wallpaper/Store/Index.plist`. It then restarts `WallpaperAgent` to load the change.
 
