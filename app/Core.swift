@@ -4,7 +4,7 @@ import SwiftUI
 
 let home = FileManager.default.homeDirectoryForCurrentUser
 let walCache = home.appendingPathComponent(".cache/wal")
-let defaultLibrary = home.appendingPathComponent("Downloads/Wallpapers")
+let defaultLibrary = home.appendingPathComponent("Pictures/Wallpapers")
 let supportDir = home.appendingPathComponent("Library/Application Support/Fandeck")
 let wallpaperIndex = home.appendingPathComponent("Library/Application Support/com.apple.wallpaper/Store/Index.plist")
 let imageExtensions: Set<String> = ["png", "jpg", "jpeg", "heic", "webp", "tiff", "bmp"]
