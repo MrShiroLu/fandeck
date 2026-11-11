@@ -1,6 +1,7 @@
 // Logic tests for the app sources. Run with ./build.sh test
 import AppKit
 import ImageIO
+import Carbon.HIToolbox
 import UniformTypeIdentifiers
 
 var failures = 0
@@ -35,6 +36,8 @@ struct Tests {
 
         schedule()
         shuffle()
+        shortcuts()
+        terminalConfig()
         collageLayouts()
         files(in: dir)
 
@@ -84,6 +87,40 @@ struct Tests {
         check(h.count == Shuffle.historyLimit && h.last == urls[11], "history keeps the newest \(Shuffle.historyLimit) entries")
         check(Shuffle.appending(urls[11], to: h) == h, "the same wallpaper twice in a row is stored once")
         check(Shuffle.label(60) == "hour" && Shuffle.label(1440) == "day", "interval labels read as \"every hour\", \"every day\"")
+    }
+
+    static func shortcuts() {
+        check(Shortcut.shuffle.display == "⌃⌥⌘N" && Shortcut.previous.display == "⌃⌥⌘P", "default shortcuts read ⌃⌥⌘N and ⌃⌥⌘P")
+        check(Shortcut.shuffle.carbonModifiers == UInt32(controlKey | optionKey | cmdKey), "modifiers convert to Carbon flags")
+        func key(_ code: Int, _ chars: String, _ flags: NSEvent.ModifierFlags) -> NSEvent {
+            NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: flags, timestamp: 0, windowNumber: 0, context: nil,
+                             characters: chars, charactersIgnoringModifiers: chars, isARepeat: false, keyCode: UInt16(code))!
+        }
+        check(Shortcut(event: key(kVK_ANSI_B, "b", [])) == nil, "a key without modifiers is rejected")
+        check(Shortcut(event: key(kVK_ANSI_B, "B", [.shift])) == nil, "shift alone is rejected")
+        check(Shortcut(event: key(kVK_ANSI_B, "b", [.option, .shift]))?.display == "⌥⇧B", "⌥⇧B is recorded")
+        check(Shortcut(event: key(kVK_RightArrow, "\u{F703}", [.control, .command]))?.display == "⌃⌘→", "arrow keys get a readable name")
+
+        let name = "testShortcut"
+        UserDefaults.standard.removeObject(forKey: name)
+        check(Shortcut.load(name, default: .shuffle) == .shuffle, "an unset shortcut uses the default")
+        Shortcut.save(.previous, as: name)
+        check(Shortcut.load(name, default: .shuffle) == .previous, "a saved shortcut loads back")
+        Shortcut.save(nil, as: name)
+        check(Shortcut.load(name, default: .shuffle) == nil, "a cleared shortcut stays off")
+        UserDefaults.standard.removeObject(forKey: name)
+    }
+
+    static func terminalConfig() {
+        let line = "config-file = ?/x/ghostty.conf"
+        let block = "# Fandeck: colors generated from the wallpaper\n\(line)\n"
+        check(SetupModel.adding(line, to: "", atTop: false) == block, "empty config gets just the Fandeck lines")
+        check(SetupModel.adding(line, to: "font-size = 14", atTop: false) == "font-size = 14\n\n" + block,
+              "a config without a final newline gets a blank line before the Fandeck lines")
+        check(SetupModel.adding(line, to: "font-size = 14\n", atTop: false) == "font-size = 14\n\n" + block,
+              "a config with a final newline gets one blank line")
+        check(SetupModel.adding("include x", to: "opacity 0.9\n", atTop: true).hasSuffix("\n\nopacity 0.9\n"),
+              "kitty's line goes on top, above the user's settings")
     }
 
     static func collageLayouts() {
