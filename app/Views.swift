@@ -294,8 +294,9 @@ struct MenuBarContent: View {
                 Text(model.status).font(.caption).foregroundStyle(.secondary).lineLimit(2)
             }
             Divider()
-            row("Shuffle Wallpaper", "shuffle") { model.applyRandom() }.disabled(model.busy)
-            row("Previous Wallpaper", "arrow.uturn.backward") { model.goBack() }.disabled(model.busy || model.recent.isEmpty)
+            row("Shuffle Wallpaper", "shuffle", model.shuffleShortcut) { model.applyRandom() }.disabled(model.busy)
+            row("Previous Wallpaper", "arrow.uturn.backward", model.previousShortcut) { model.goBack() }
+                .disabled(model.busy || model.recent.isEmpty)
             row("Regenerate Colors", "arrow.triangle.2.circlepath") { model.refreshColors() }.disabled(model.busy)
             Toggle(isOn: $model.shuffleEnabled) { Label("Shuffle Every \(Shuffle.label(model.shuffleMinutes).capitalized)", systemImage: "timer") }
                 .toggleStyle(.switch).controlSize(.small).padding(.horizontal, 6)
@@ -310,10 +311,14 @@ struct MenuBarContent: View {
         .tint(model.accent)
     }
 
-    private func row(_ title: String, _ symbol: String, action: @escaping () -> Void) -> some View {
+    private func row(_ title: String, _ symbol: String, _ shortcut: Shortcut? = nil, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Label(title, systemImage: symbol).frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 6).padding(.vertical, 3).contentShape(Rectangle())
+            HStack {
+                Label(title, systemImage: symbol)
+                Spacer()
+                if let shortcut { Text(shortcut.display).foregroundStyle(.secondary) }
+            }
+            .padding(.horizontal, 6).padding(.vertical, 3).contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }

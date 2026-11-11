@@ -48,6 +48,22 @@ final class AppModel: ObservableObject {
         }
     }
     @Published var shuffleMinutes: Int { didSet { UserDefaults.standard.set(shuffleMinutes, forKey: "shuffleMinutes") } }
+    @Published var shuffleShortcut: Shortcut? {
+        didSet {
+            Shortcut.save(shuffleShortcut, as: "shuffleShortcut")
+            registerShortcuts()
+        }
+    }
+    @Published var previousShortcut: Shortcut? {
+        didSet {
+            Shortcut.save(previousShortcut, as: "previousShortcut")
+            registerShortcuts()
+        }
+    }
+    /// True while a shortcut is being recorded, so pressing the old one doesn't fire it
+    @Published var shortcutsPaused = false { didSet { registerShortcuts() } }
+    /// Shortcuts that macOS or another app already uses
+    @Published var takenShortcuts: Set<String> = []
     /// When the wallpaper last changed; the shuffle countdown starts from here
     @Published var lastChange: Date {
         didSet { UserDefaults.standard.set(lastChange.timeIntervalSince1970, forKey: "lastWallpaperChange") }
@@ -76,11 +92,14 @@ final class AppModel: ObservableObject {
         shuffleMinutes = UserDefaults.standard.object(forKey: "shuffleMinutes") as? Int ?? 60
         let changed = UserDefaults.standard.double(forKey: "lastWallpaperChange")
         lastChange = changed > 0 ? Date(timeIntervalSince1970: changed) : Date()
+        shuffleShortcut = Shortcut.load("shuffleShortcut", default: .shuffle)
+        previousShortcut = Shortcut.load("previousShortcut", default: .previous)
         tab = SetupModel.isReady ? UserDefaults.standard.string(forKey: "page").flatMap(Page.init) ?? .gallery : .setup
         reload()
         updateWatcher()
         watchFolders()
         startTimer()
+        registerShortcuts()
     }
 
     func reload() {

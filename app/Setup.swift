@@ -214,6 +214,16 @@ struct SetupView: View {
                 }
             }
 
+            Section {
+                shortcutRow("Shuffle wallpaper", "shuffle", $model.shuffleShortcut)
+                shortcutRow("Previous wallpaper", "previous", $model.previousShortcut)
+            } header: {
+                Text("Keyboard shortcuts")
+            } footer: {
+                Text("These work from any app. Click one and press new keys to change it, or Esc to cancel.")
+                    .font(.caption).opacity(0.55)
+            }
+
             Section("Wallpaper folders") {
                 FolderList()
             }
@@ -249,6 +259,14 @@ struct SetupView: View {
         let value = UserDefaults.standard.object(forKey: "AppleAccentColor") as? Int
         let name = value.flatMap { names[$0] } ?? "Multicolor"
         return "Currently \(name), the system color closest to the wallpaper"
+    }
+
+    private func shortcutRow(_ title: String, _ id: String, _ shortcut: Binding<Shortcut?>) -> some View {
+        let taken = model.takenShortcuts.contains(id)
+        return SetupRow(state: shortcut.wrappedValue == nil ? .optional : taken ? .missing : .ok, title: title,
+                        detail: shortcut.wrappedValue == nil ? "Off" : taken ? "Already used by macOS or another app, pick another" : "On") {
+            ShortcutRecorder(shortcut: shortcut)
+        }
     }
 
     private func actionButton(_ title: String, id: String, action: @escaping () -> Void) -> some View {
