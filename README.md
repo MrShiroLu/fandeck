@@ -2,35 +2,27 @@
 
 <h1 align="center">Fandeck</h1>
 
-<p align="center">Pick a wallpaper, and the rest of your Mac follows: the kitty terminal, the system accent color, and the app itself.</p>
+<p align="center">A macOS app that sets your wallpaper and matches the kitty terminal and the system accent color to it.</p>
 
----
+Fandeck uses [pywal16](https://github.com/eylles/pywal16) to pull a palette out of the wallpaper. When you pick an image, Fandeck sets it on every Space, generates a 16 color palette, reloads kitty with that palette and sets the macOS accent color to the closest system color. The app window takes on the same colors.
 
-Named after a painter's fan deck of paint chips: every wallpaper gets its own strip of colors.
-
-Fandeck is a small macOS app built around [pywal](https://github.com/eylles/pywal16). When you set a wallpaper it:
-
-- puts the image on **every Space** (not just the one you're on),
-- generates a 16-color palette from it,
-- reloads **kitty** with that palette, open windows included,
-- sets the macOS **accent color** to the closest system color, so folders, selections and buttons match,
-- recolors its own window to the new palette.
+The name comes from the fan decks painters use to pick paint colors.
 
 ## Features
 
-- **Gallery** of every image in your wallpaper folders. Click one to apply it, or drop any image onto the window.
-- **Wallpaper folders**: choose which folders to read from. Subfolders are included. Images from elsewhere are copied into the primary folder so they don't disappear.
-- **Collage**: combine up to 9 images in a grid, feature, column or row layout. Spacing, corner radius and background are adjustable. The result is rendered at your screen's native resolution.
-- **Schedule**: switch wallpapers by day and time, for example a bright one on weekday mornings and a darker one every evening. Each rule holds until the next one fires. Missed rules catch up after sleep.
-- **Follows System Settings**: if you change the wallpaper somewhere else, the colors still update.
-- **Menu bar**: shuffle, regenerate colors, toggle the schedule. Closing the window keeps the app running in the menu bar.
-- **Setup page**: checks for Homebrew, Python and pywal and installs what's missing. It also connects kitty and turns on open at login.
+- Gallery: shows every image in your wallpaper folders. Click one to apply it, or drop an image file onto the window.
+- Wallpaper folders: choose which folders Fandeck reads from. Subfolders are included. An image applied from anywhere else is copied into the first folder so it stays available.
+- Collage: combine up to 9 images in a grid, feature, column or row layout. You can adjust the spacing, corner radius and background color. Collages are saved at your screen's full resolution.
+- Schedule: change the wallpaper by day and time, for example a light image on weekday mornings and a dark one every evening. A rule stays in effect until the next rule fires. If the Mac was asleep when a rule was due, it runs on wake.
+- System Settings sync: if you change the wallpaper in System Settings, Fandeck updates the colors to match.
+- Menu bar: shuffle the wallpaper, regenerate colors or turn the schedule on and off. Closing the window leaves Fandeck running in the menu bar.
+- Setup page: checks for Homebrew, Python and pywal16 and installs what is missing. It also connects kitty and controls open at login.
 
 ## Requirements
 
-- macOS 14 or later, Apple silicon
-- Xcode Command Line Tools (to build)
-- Homebrew, Python 3 and pywal16. The Setup page can install the last two for you.
+- macOS 14 or later on Apple silicon
+- Xcode Command Line Tools to build the app
+- Homebrew, Python 3 and pywal16. The Setup page can install Python and pywal16 for you.
 
 ## Install
 
@@ -41,11 +33,11 @@ From a clone of this repo:
 open build/Fandeck.app
 ```
 
-On first launch Fandeck moves itself to `/Applications`, relaunches from there, and turns on **Open at login**, so the schedule and System Settings sync keep running. You can turn the login item off on the **Setup** tab, and it stays off. Then go through the rest of the Setup tab.
+On first launch Fandeck moves itself to `/Applications`, opens again from there and turns on open at login so the schedule and System Settings sync keep working after a restart. You can turn open at login off on the Setup page and it will stay off. Go through the rest of the Setup page once.
 
-`./build.sh --install` copies the app straight to `/Applications` instead.
+`./build.sh --install` builds the app and copies it straight to `/Applications`.
 
-To use only the script without the app:
+You can also use the script on its own, without the app:
 
 ```sh
 pipx install pywal16
@@ -54,27 +46,27 @@ python3 fandeck.py --set ~/Pictures/some-wallpaper.jpg
 
 ## kitty
 
-The Setup page adds this line to the top of `~/.config/kitty/kitty.conf` (a backup is kept):
+The Setup page adds this line to the top of `~/.config/kitty/kitty.conf` and keeps a backup of the old file:
 
 ```conf
 include ~/.cache/wal/colors-kitty.conf
 ```
 
-Anything later in your config, such as `background_opacity`, still overrides it. Fandeck sends kitty `SIGUSR1` to reload the config.
+Settings further down in your config, such as `background_opacity`, still take effect. Fandeck sends kitty a `SIGUSR1` signal so open windows reload their colors.
 
 ## How it works
 
-| Piece | What it does |
+| File | Role |
 | --- | --- |
-| `fandeck.py` | Runs `wal` on the image, picks the most vivid palette color, maps it to the nearest `AppleAccentColor` and posts the color-change notifications. With `--set`, it also writes the wallpaper to every Space. |
-| `app/` | The SwiftUI app. It runs the bundled script, and watches the wallpaper store to catch changes made in System Settings. |
-| `tools/make-icon.swift` | Draws the app icon with CoreGraphics. `tools/make-icon.sh` turns it into `AppIcon.icns`. |
+| `fandeck.py` | Runs `wal` on the image, picks the most vivid palette color, maps it to the nearest `AppleAccentColor` and notifies running apps of the change. With `--set` it also sets the wallpaper on every Space. |
+| `app/` | The SwiftUI app. It runs the bundled script and watches the wallpaper store to catch changes made in System Settings. |
+| `tools/make-icon.swift` | Draws the app icon with CoreGraphics. `tools/make-icon.sh` turns the drawing into `AppIcon.icns`. |
 
-macOS's `NSWorkspace.setDesktopImageURL` only changes the current Space. To set the wallpaper everywhere, `fandeck.py --set` writes the same record that **Show on all Spaces** in System Settings writes. That record lives in `~/Library/Application Support/com.apple.wallpaper/Store/Index.plist`. The script then restarts `WallpaperAgent` so the change is picked up.
+`NSWorkspace.setDesktopImageURL` only changes the wallpaper of the current Space. To cover every Space, `fandeck.py --set` writes the same entry that the "Show on all Spaces" option in System Settings writes, in `~/Library/Application Support/com.apple.wallpaper/Store/Index.plist`. It then restarts `WallpaperAgent` to load the change.
 
 ## Limitations
 
-- macOS only offers eight accent colors (graphite plus seven hues), so the accent is the closest match, not the exact color. Mostly gray wallpapers give graphite.
-- Other apps' window backgrounds can't be themed system-wide. Apps with pywal support (VS Code, Firefox through pywalfox, and others) can read `~/.cache/wal` themselves.
-- Applying a wallpaper from Fandeck replaces per-Space wallpapers with a single one.
-- The app is ad-hoc signed. The first time you open it, macOS may ask you to confirm in System Settings › Privacy & Security.
+- macOS has eight accent colors: graphite and seven hues. Fandeck picks the closest one, so the accent will not match the wallpaper exactly. Mostly gray wallpapers end up graphite.
+- Other apps can't be recolored from outside. Apps that support pywal, such as VS Code or Firefox with pywalfox, can read the palette from `~/.cache/wal`.
+- Applying a wallpaper from Fandeck replaces separate per-Space wallpapers with one image.
+- The app is ad-hoc signed. macOS may ask you to approve it in System Settings › Privacy & Security on first launch, and it asks for folder access again after every new build.
