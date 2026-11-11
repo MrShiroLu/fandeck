@@ -29,19 +29,42 @@ struct PaletteStrip: View {
     var count = 8
     var height: CGFloat = 34
     @State private var copied: Int?
+    @State private var hovered: Int?
 
     var body: some View {
         HStack(spacing: 0) {
             ForEach(0..<count, id: \.self) { i in
+                let ink = isLight(palette.colors[i]) ? Color.black : Color.white
                 Rectangle().fill(palette.colors[i])
+                    .overlay {
+                        if hovered == i { Rectangle().strokeBorder(ink.opacity(0.7), lineWidth: 1.5) }
+                    }
                     .overlay {
                         if copied == i {
                             Image(systemName: "checkmark").font(.system(size: height * 0.4, weight: .bold))
-                                .foregroundStyle(isLight(palette.colors[i]) ? Color.black : Color.white)
+                                .foregroundStyle(ink)
                                 .transition(.opacity)
+                        } else if hovered == i {
+                            // The strip in the menu bar is too short for the hex code, so it gets a copy icon
+                            Group {
+                                if height >= 28 {
+                                    Text(palette.hexes[i].dropFirst()).font(.system(size: 10, weight: .semibold, design: .monospaced))
+                                        .lineLimit(1).minimumScaleFactor(0.6).padding(.horizontal, 2)
+                                } else {
+                                    Image(systemName: "doc.on.doc").font(.system(size: height * 0.5))
+                                }
+                            }
+                            .foregroundStyle(ink.opacity(0.85))
+                            .transition(.opacity)
                         }
                     }
                     .contentShape(Rectangle())
+                    .onHover { inside in
+                        withAnimation(.easeOut(duration: 0.12)) {
+                            if inside { hovered = i } else if hovered == i { hovered = nil }
+                        }
+                        (inside ? NSCursor.pointingHand : NSCursor.arrow).set()
+                    }
                     .onTapGesture { copy(i) }
                     .help("\(palette.hexes[i]) · click to copy")
             }
