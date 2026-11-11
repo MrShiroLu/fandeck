@@ -13,12 +13,12 @@ The name comes from the fan decks painters use to pick paint colors.
 ## Features
 
 - Gallery: shows every image in your wallpaper folders. Click one to apply it, or drop an image file onto the window.
-- Wallpaper folders: choose which folders Fandeck reads from. Subfolders are included. An image applied from anywhere else is copied into the first folder so it stays available.
+- Wallpaper folders: choose which folders Fandeck reads from. Subfolders are included, and images you add or delete in Finder show up right away. An image applied from anywhere else is copied into the first folder so it stays available.
 - Collage: combine up to 9 images in a grid, feature, column or row layout. You can adjust the spacing, corner radius and background color. Collages are saved at your screen's full resolution.
 - Schedule: change the wallpaper by day and time, for example a light image on weekday mornings and a dark one every evening. A rule stays in effect until the next rule fires. If the Mac was asleep when a rule was due, it runs on wake.
 - System Settings sync: if you change the wallpaper in System Settings, Fandeck updates the colors to match.
 - Menu bar: shuffle the wallpaper, regenerate colors or turn the schedule on and off. Closing the window leaves Fandeck running in the menu bar.
-- Setup page: checks for Homebrew, Python and pywal16 and installs what is missing. It also connects kitty and controls open at login.
+- Setup page: checks for Homebrew, Python, ImageMagick and pywal16 and installs what is missing. It also connects kitty and controls open at login.
 
 ## Screenshots
 
@@ -32,7 +32,7 @@ The wallpapers in these screenshots are generated demo images.
 
 - macOS 14 or later on Apple silicon
 - Xcode Command Line Tools to build the app
-- Homebrew, Python 3 and pywal16. The Setup page can install Python and pywal16 for you.
+- Homebrew, Python 3, ImageMagick and pywal16. The Setup page can install the last three for you.
 
 ## Install
 
@@ -50,6 +50,7 @@ On first launch Fandeck moves itself to `/Applications`, opens again from there 
 You can also use the script on its own, without the app:
 
 ```sh
+brew install imagemagick pipx
 pipx install pywal16
 python3 fandeck.py --set ~/Pictures/some-wallpaper.jpg
 ```
@@ -71,6 +72,7 @@ Settings further down in your config, such as `background_opacity`, still take e
 | `fandeck.py` | Runs `wal` on the image, picks the most vivid palette color, maps it to the nearest `AppleAccentColor` and notifies running apps of the change. With `--set` it also sets the wallpaper on every Space. |
 | `app/` | The SwiftUI app. It runs the bundled script and watches the wallpaper store to catch changes made in System Settings. |
 | `tools/make-icon.swift` | Draws the app icon with CoreGraphics. `tools/make-icon.sh` turns the drawing into `AppIcon.icns`. |
+| `tests/` | Logic tests for the schedule, collage layouts, thumbnails, folder scanning and file watching. Run them with `./build.sh test`. |
 
 `NSWorkspace.setDesktopImageURL` only changes the wallpaper of the current Space. To cover every Space, `fandeck.py --set` writes the same entry that the "Show on all Spaces" option in System Settings writes, in `~/Library/Application Support/com.apple.wallpaper/Store/Index.plist`. It then restarts `WallpaperAgent` to load the change.
 
@@ -80,3 +82,7 @@ Settings further down in your config, such as `background_opacity`, still take e
 - Other apps can't be recolored from outside. Apps that support pywal, such as VS Code or Firefox with pywalfox, can read the palette from `~/.cache/wal`.
 - Applying a wallpaper from Fandeck replaces separate per-Space wallpapers with one image.
 - The app is ad-hoc signed. macOS may ask you to approve it in System Settings › Privacy & Security on first launch, and it asks for folder access again after every new build.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
