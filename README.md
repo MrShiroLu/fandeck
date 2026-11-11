@@ -38,6 +38,18 @@ The name comes from the fan decks painters use to pick paint colors.
 
 ## Install
 
+### Download
+
+Get `Fandeck-<version>.zip` from the [latest release](https://github.com/MrShiroLu/fandeck/releases/latest), unzip it and open Fandeck.
+
+Fandeck is not notarized by Apple, so macOS blocks the first launch. Open System Settings › Privacy & Security and click Open Anyway next to the message about Fandeck. You can also clear the download flag in Terminal instead:
+
+```sh
+xattr -dr com.apple.quarantine ~/Downloads/Fandeck.app
+```
+
+### Build from source
+
 ```sh
 git clone https://github.com/MrShiroLu/fandeck.git
 cd fandeck
@@ -45,9 +57,13 @@ cd fandeck
 open build/Fandeck.app
 ```
 
-On first launch Fandeck moves itself to `/Applications`, opens again from there and turns on open at login so the schedule and System Settings sync keep working after a restart. You can turn open at login off on the Setup page and it will stay off. Go through the rest of the Setup page once.
+`./build.sh --install` builds the app and copies it straight to `/Applications`. `./build.sh --zip` packs it for a release.
 
-`./build.sh --install` builds the app and copies it straight to `/Applications`.
+### First launch
+
+Fandeck moves itself to `/Applications`, opens again from there and turns on open at login so the schedule and System Settings sync keep working after a restart. You can turn open at login off on the Setup page and it will stay off. Go through the rest of the Setup page once.
+
+### Script only
 
 You can also use the script on its own, without the app:
 

@@ -1,5 +1,6 @@
 #!/bin/sh
-# Builds build/Fandeck.app. With --install, also copies it to /Applications. With test, runs the logic tests
+# Builds build/Fandeck.app. With --install, also copies it to /Applications. With --zip, packs it for a release.
+# With test, runs the logic tests
 set -e
 cd "$(dirname "$0")"
 
@@ -24,6 +25,13 @@ cp app/Info.plist "$APP/Contents/"
 cp app/AppIcon.icns fandeck.py "$APP/Contents/Resources/"
 codesign --force -s - "$APP"
 echo "built: $PWD/$APP"
+
+if [ "$1" = "--zip" ]; then
+    VERSION=$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' app/Info.plist)
+    rm -f "build/Fandeck-$VERSION.zip"
+    ditto -c -k --norsrc --keepParent "$APP" "build/Fandeck-$VERSION.zip"
+    echo "packed: $PWD/build/Fandeck-$VERSION.zip"
+fi
 
 if [ "$1" = "--install" ]; then
     osascript -e 'quit app "Fandeck"' 2>/dev/null || true
