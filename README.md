@@ -35,10 +35,13 @@ wallMatch is a small macOS app built around [pywal](https://github.com/eylles/py
 From a clone of this repo:
 
 ```sh
-./build.sh --install    # builds and copies wallMatch.app to /Applications
+./build.sh
+open build/wallMatch.app
 ```
 
-Open wallMatch and go through the **Setup** tab. To have the schedule and System Settings sync running all the time, turn on **Open at login** there.
+On first launch wallMatch moves itself to `/Applications`, relaunches from there, and turns on **Open at login**, so the schedule and System Settings sync keep running. You can turn the login item off on the **Setup** tab, and it stays off. Then go through the rest of the Setup tab.
+
+`./build.sh --install` copies the app straight to `/Applications` instead.
 
 To use only the script without the app:
 

@@ -9,6 +9,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     static var launchedHidden = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        if !Installer.inApplications && Installer.moveToApplications() {
+            NSApp.windows.forEach { $0.orderOut(nil) }
+            return
+        }
+        Installer.enableLoginItemOnce()
         // Launched by launchd as a login item there is no Apple Event; Finder, Dock and `open` send 'oapp'
         let event = NSAppleEventManager.shared().currentAppleEvent
         let loginItem = event?.paramDescriptor(forKeyword: keyAEPropData)?.enumCodeValue == keyAELaunchedAsLogInItem

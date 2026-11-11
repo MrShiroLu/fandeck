@@ -2,6 +2,44 @@ import AppKit
 import ServiceManagement
 import SwiftUI
 
+/// First-launch install: live in /Applications and open at login
+@MainActor
+enum Installer {
+    static let target = URL(fileURLWithPath: "/Applications/wallMatch.app")
+
+    static var inApplications: Bool { Bundle.main.bundleURL.standardizedFileURL == target }
+
+    /// Moves the app to /Applications and relaunches it from there. Returns false if nothing was relaunched.
+    static func moveToApplications() -> Bool {
+        let fm = FileManager.default
+        let source = Bundle.main.bundleURL
+        let others = NSRunningApplication.runningApplications(withBundleIdentifier: Bundle.main.bundleIdentifier ?? "")
+            .filter { $0 != .current }
+        others.forEach { $0.terminate() }
+        do {
+            if fm.fileExists(atPath: target.path) { try fm.removeItem(at: target) }
+            try fm.copyItem(at: source, to: target)
+        } catch {
+            return false
+        }
+        // A move, not a copy: don't leave a second app behind. Fails harmlessly on read-only volumes.
+        try? fm.removeItem(at: source)
+        let config = NSWorkspace.OpenConfiguration()
+        config.createsNewApplicationInstance = true
+        NSWorkspace.shared.openApplication(at: target, configuration: config) { _, _ in
+            DispatchQueue.main.async { NSApp.terminate(nil) }
+        }
+        return true
+    }
+
+    /// Turns on open at login once; if the user turns it off later, it stays off
+    static func enableLoginItemOnce() {
+        guard inApplications, !UserDefaults.standard.bool(forKey: "loginItemSetUp") else { return }
+        UserDefaults.standard.set(true, forKey: "loginItemSetUp")
+        try? SMAppService.mainApp.register()
+    }
+}
+
 @MainActor
 final class SetupModel: ObservableObject {
     @Published var brew: URL?
@@ -17,10 +55,8 @@ final class SetupModel: ObservableObject {
 
     static let kittyConf = home.appendingPathComponent(".config/kitty/kitty.conf")
     static let oldAgentPlist = home.appendingPathComponent("Library/LaunchAgents/com.vyke.wallmatch.plist")
-    static let installedApp = URL(fileURLWithPath: "/Applications/wallMatch.app")
-
     static var isReady: Bool { Tools.find("python3") != nil && Tools.find("wal") != nil }
-    var inApplications: Bool { Bundle.main.bundleURL.standardizedFileURL == Self.installedApp }
+    var inApplications: Bool { Installer.inApplications }
 
     init() { refresh() }
 
@@ -94,20 +130,10 @@ final class SetupModel: ObservableObject {
     }
 
     func installToApplications() {
-        let src = Bundle.main.bundlePath, dest = Self.installedApp.path
         running = "apps"
-        Task {
-            let r = try? await Tools.shell("rm -rf '\(dest)' && cp -R '\(src)' '\(dest)'")
-            guard r?.status == 0 else {
-                log = r?.output ?? "Copy failed"
-                running = nil
-                return
-            }
-            let config = NSWorkspace.OpenConfiguration()
-            config.createsNewApplicationInstance = true
-            NSWorkspace.shared.openApplication(at: Self.installedApp, configuration: config) { _, _ in
-                DispatchQueue.main.async { NSApp.terminate(nil) }
-            }
+        if !Installer.moveToApplications() {
+            log = "Could not copy the app to /Applications"
+            running = nil
         }
     }
 }
