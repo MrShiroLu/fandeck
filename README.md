@@ -13,7 +13,7 @@ The name comes from the fan decks painters use to pick paint colors.
 ## Features
 
 - Gallery: shows every image in your wallpaper folders. Click one to apply it, or drop an image file onto the window.
-- Wallpaper folders: choose which folders Fandeck reads from. Subfolders are included, and images you add or delete in Finder show up right away. An image applied from anywhere else is copied into the first folder so it stays available.
+- Wallpaper folders: choose which folders Fandeck reads from. It starts with `~/Pictures/Wallpapers`. Subfolders are included, and images you add or delete in Finder show up right away. An image applied from anywhere else is copied into the first folder so it stays available.
 - Collage: combine up to 9 images in a grid, feature, column or row layout. You can adjust the spacing, corner radius and background color. Collages are saved at your screen's full resolution.
 - Schedule: change the wallpaper by day and time, for example a light image on weekday mornings and a dark one every evening. A rule stays in effect until the next rule fires. If the Mac was asleep when a rule was due, it runs on wake.
 - System Settings sync: if you change the wallpaper in System Settings, Fandeck updates the colors to match.
@@ -36,9 +36,9 @@ The name comes from the fan decks painters use to pick paint colors.
 
 ## Install
 
-From a clone of this repo:
-
 ```sh
+git clone https://github.com/MrShiroLu/fandeck.git
+cd fandeck
 ./build.sh
 open build/Fandeck.app
 ```
