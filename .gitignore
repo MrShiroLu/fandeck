@@ -1,0 +1,13 @@
+build/
+.DS_Store
+__pycache__/
+
+# Keep personal wallpapers and screenshots out of the repo; only the icon is tracked
+*.png
+*.jpg
+*.jpeg
+*.heic
+*.webp
+*.tiff
+*.bmp
+!docs/icon.png
