@@ -22,5 +22,11 @@
     <string>public.app-category.utilities</string>
     <key>NSHighResolutionCapable</key>
     <true/>
+    <key>NSDesktopFolderUsageDescription</key>
+    <string>Fandeck reads wallpaper images from the folders you choose.</string>
+    <key>NSDocumentsFolderUsageDescription</key>
+    <string>Fandeck reads wallpaper images from the folders you choose.</string>
+    <key>NSDownloadsFolderUsageDescription</key>
+    <string>Fandeck reads wallpaper images from the folders you choose.</string>
 </dict>
 </plist>
