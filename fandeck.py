@@ -120,7 +120,7 @@ def main():
     accent_hex = pick_accent(colors)
     accent = set_macos_colors(accent_hex)
     reload_kitty()
-    print(f"{os.path.basename(wallpaper)} · accent {accent_hex} ({ACCENT_NAMES[accent]})")
+    print(f"Accent {accent_hex}, closest macOS color: {ACCENT_NAMES[accent]}")
     return 0
 
 
