@@ -39,6 +39,19 @@ final class AppModel: ObservableObject {
             checkSchedule()
         }
     }
+    /// Recently shown wallpapers, oldest first; the last entry is the current one
+    @Published var history: [URL] { didSet { UserDefaults.standard.set(history.map(\.path), forKey: "history") } }
+    @Published var shuffleEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(shuffleEnabled, forKey: "shuffleEnabled")
+            if shuffleEnabled { lastChange = Date() }
+        }
+    }
+    @Published var shuffleMinutes: Int { didSet { UserDefaults.standard.set(shuffleMinutes, forKey: "shuffleMinutes") } }
+    /// When the wallpaper last changed; the shuffle countdown starts from here
+    @Published var lastChange: Date {
+        didSet { UserDefaults.standard.set(lastChange.timeIntervalSince1970, forKey: "lastWallpaperChange") }
+    }
 
     private var watcher: FileWatcher?
     private var folderWatcher: FolderWatcher?
@@ -58,6 +71,11 @@ final class AppModel: ObservableObject {
         let schedule = ScheduleState.load()
         rules = schedule.rules
         scheduleEnabled = schedule.enabled
+        history = (UserDefaults.standard.stringArray(forKey: "history") ?? []).map { URL(fileURLWithPath: $0) }
+        shuffleEnabled = UserDefaults.standard.bool(forKey: "shuffleEnabled")
+        shuffleMinutes = UserDefaults.standard.object(forKey: "shuffleMinutes") as? Int ?? 60
+        let changed = UserDefaults.standard.double(forKey: "lastWallpaperChange")
+        lastChange = changed > 0 ? Date(timeIntervalSince1970: changed) : Date()
         tab = SetupModel.isReady ? UserDefaults.standard.string(forKey: "page").flatMap(Page.init) ?? .gallery : .setup
         reload()
         updateWatcher()
@@ -67,6 +85,7 @@ final class AppModel: ObservableObject {
 
     func reload() {
         if let screen = NSScreen.main { current = NSWorkspace.shared.desktopImageURL(for: screen) }
+        if let current { remember(current) }
         palette = Palette.load()
         scan()
     }
@@ -82,6 +101,7 @@ final class AppModel: ObservableObject {
             if !Task.isCancelled {
                 wallpapers = found
                 scanning = false
+                checkShuffle()
             }
         }
     }
@@ -138,8 +158,7 @@ final class AppModel: ObservableObject {
     }
 
     func applyRandom() {
-        let others = wallpapers.filter { $0.standardizedFileURL != current?.standardizedFileURL }
-        if let url = others.randomElement() { apply(url) }
+        if let url = Shuffle.pick(from: wallpapers, current: current, history: history) { apply(url) }
     }
 
     /// Regenerate colors without touching the wallpaper
@@ -187,11 +206,17 @@ final class AppModel: ObservableObject {
 
     private func startTimer() {
         timer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { _ in
-            Task { @MainActor in AppModel.shared.checkSchedule() }
+            Task { @MainActor in AppModel.shared.tick() }
         }
         NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { _ in
-            Task { @MainActor in AppModel.shared.checkSchedule() }
+            Task { @MainActor in AppModel.shared.tick() }
         }
-        DispatchQueue.main.async { self.checkSchedule() }
+        DispatchQueue.main.async { self.tick() }
+    }
+
+    /// Schedule rules go first: when both are due, the rule wins and the shuffle countdown restarts
+    private func tick() {
+        checkSchedule()
+        checkShuffle()
     }
 }

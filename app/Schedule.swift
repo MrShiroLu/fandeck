@@ -88,6 +88,8 @@ struct ScheduleView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
+            ShuffleRow()
+                .padding(.bottom, 8)
             HStack(alignment: .firstTextBaseline, spacing: 12) {
                 Text("Switch wallpapers on chosen days and times. Each rule holds until the next one fires.")
                     .font(.callout).opacity(0.65)

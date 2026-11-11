@@ -217,6 +217,7 @@ struct GalleryView: View {
                     Button { picking = true } label: { Text("Choose Image…") }
                         .buttonStyle(.borderedProminent)
                     Button { model.applyRandom() } label: { Label("Shuffle", systemImage: "shuffle") }
+                    PreviousMenu()
                 }
                 .disabled(model.busy)
                 Text(model.status.isEmpty ? "Drop an image anywhere on this window to use it." : model.status)
@@ -251,6 +252,29 @@ struct GalleryView: View {
     }
 }
 
+/// Click to go back one wallpaper; the arrow lists the recent ones
+struct PreviousMenu: View {
+    @EnvironmentObject var model: AppModel
+
+    var body: some View {
+        let recent = model.recent
+        Menu {
+            Section("Recent") {
+                ForEach(recent.prefix(10), id: \.self) { url in
+                    Button(url.lastPathComponent) { model.apply(url) }
+                }
+            }
+        } label: {
+            Label("Previous", systemImage: "arrow.uturn.backward")
+        } primaryAction: {
+            model.goBack()
+        }
+        .fixedSize()
+        .disabled(recent.isEmpty)
+        .help(recent.first.map { "Back to \($0.lastPathComponent)" } ?? "No earlier wallpaper yet")
+    }
+}
+
 // MARK: - Menu bar
 
 struct MenuBarContent: View {
@@ -271,7 +295,10 @@ struct MenuBarContent: View {
             }
             Divider()
             row("Shuffle Wallpaper", "shuffle") { model.applyRandom() }.disabled(model.busy)
+            row("Previous Wallpaper", "arrow.uturn.backward") { model.goBack() }.disabled(model.busy || model.recent.isEmpty)
             row("Regenerate Colors", "arrow.triangle.2.circlepath") { model.refreshColors() }.disabled(model.busy)
+            Toggle(isOn: $model.shuffleEnabled) { Label("Shuffle Every \(Shuffle.label(model.shuffleMinutes).capitalized)", systemImage: "timer") }
+                .toggleStyle(.switch).controlSize(.small).padding(.horizontal, 6)
             Toggle(isOn: $model.scheduleEnabled) { Label("Schedule", systemImage: "clock") }
                 .toggleStyle(.switch).controlSize(.small).padding(.horizontal, 6)
             Divider()
