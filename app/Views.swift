@@ -23,21 +23,46 @@ struct Thumbnail: View {
     }
 }
 
-/// The palette as one continuous strip; hover a cell for its hex value. Colors 8-15 are near-copies of 0-7, so they are left out
+/// The palette as one continuous strip; click a cell to copy its hex value. Colors 8-15 are near-copies of 0-7, so they are left out
 struct PaletteStrip: View {
     let palette: Palette
     var count = 8
     var height: CGFloat = 34
+    @State private var copied: Int?
 
     var body: some View {
         HStack(spacing: 0) {
             ForEach(0..<count, id: \.self) { i in
-                Rectangle().fill(palette.colors[i]).help(palette.hexes[i])
+                Rectangle().fill(palette.colors[i])
+                    .overlay {
+                        if copied == i {
+                            Image(systemName: "checkmark").font(.system(size: height * 0.4, weight: .bold))
+                                .foregroundStyle(isLight(palette.colors[i]) ? Color.black : Color.white)
+                                .transition(.opacity)
+                        }
+                    }
+                    .contentShape(Rectangle())
+                    .onTapGesture { copy(i) }
+                    .help("\(palette.hexes[i]) · click to copy")
             }
         }
         .frame(height: height)
         .clipShape(RoundedRectangle(cornerRadius: 5))
         .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(palette.foreground.opacity(0.12)))
+    }
+
+    private func copy(_ i: Int) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(palette.hexes[i], forType: .string)
+        withAnimation(.easeOut(duration: 0.15)) { copied = i }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+            withAnimation(.easeOut(duration: 0.3)) { if copied == i { copied = nil } }
+        }
+    }
+
+    private func isLight(_ color: Color) -> Bool {
+        guard let c = NSColor(color).usingColorSpace(.sRGB) else { return false }
+        return 0.299 * c.redComponent + 0.587 * c.greenComponent + 0.114 * c.blueComponent > 0.6
     }
 }
 
