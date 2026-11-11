@@ -44,6 +44,7 @@ enum Installer {
 final class SetupModel: ObservableObject {
     @Published var brew: URL?
     @Published var python: URL?
+    @Published var magick: URL?
     @Published var wal: URL?
     @Published var kittyFound = false
     @Published var kittyLinked = false
@@ -55,7 +56,7 @@ final class SetupModel: ObservableObject {
 
     static let kittyConf = home.appendingPathComponent(".config/kitty/kitty.conf")
     static let oldAgentPlist = home.appendingPathComponent("Library/LaunchAgents/com.vyke.wallmatch.plist")
-    static var isReady: Bool { Tools.find("python3") != nil && Tools.find("wal") != nil }
+    static var isReady: Bool { Tools.find("python3") != nil && Tools.findMagick() != nil && Tools.find("wal") != nil }
     var inApplications: Bool { Installer.inApplications }
 
     init() { refresh() }
@@ -63,6 +64,7 @@ final class SetupModel: ObservableObject {
     func refresh() {
         brew = Tools.find("brew")
         python = Tools.find("python3")
+        magick = Tools.findMagick()
         wal = Tools.find("wal")
         let conf = (try? String(contentsOf: Self.kittyConf, encoding: .utf8)) ?? ""
         kittyLinked = conf.contains("colors-kitty.conf")
@@ -146,13 +148,20 @@ struct SetupView: View {
         Form {
             Section {
                 SetupRow(state: setup.brew != nil ? .ok : .optional, title: "Homebrew",
-                         detail: setup.brew?.tildePath ?? "Needed to install Python and pipx") {
+                         detail: setup.brew?.tildePath ?? "Needed to install Python, ImageMagick and pipx") {
                     if setup.brew == nil { Link("brew.sh", destination: URL(string: "https://brew.sh")!) }
                 }
                 SetupRow(state: setup.python != nil ? .ok : .missing, title: "Python 3",
                          detail: setup.python?.tildePath ?? "Not found") {
                     if setup.python == nil {
                         actionButton("Install", id: "python") { setup.run("python", "brew install python") }
+                            .disabled(setup.brew == nil)
+                    }
+                }
+                SetupRow(state: setup.magick != nil ? .ok : .missing, title: "ImageMagick",
+                         detail: setup.magick?.tildePath ?? "pywal uses it to read the image") {
+                    if setup.magick == nil {
+                        actionButton("Install", id: "magick") { setup.run("magick", "brew install imagemagick") }
                             .disabled(setup.brew == nil)
                     }
                 }
@@ -168,7 +177,7 @@ struct SetupView: View {
                 SetupRow(state: setup.hasPalette ? .ok : .missing, title: "Color palette",
                          detail: setup.hasPalette ? "~/.cache/wal/colors.json" : "Generate the first palette from the current wallpaper") {
                     actionButton(setup.hasPalette ? "Regenerate" : "Generate", id: "palette") { setup.generatePalette() }
-                        .disabled(setup.python == nil || setup.wal == nil)
+                        .disabled(setup.python == nil || setup.magick == nil || setup.wal == nil)
                 }
             } header: {
                 Text("Requirements")

@@ -96,6 +96,9 @@ enum Tools {
         }.value
     }
 
+    /// pywal's default backend calls ImageMagick: `magick` in version 7, `convert` in version 6
+    static func findMagick() -> URL? { find("magick") ?? find("convert") }
+
     static func shell(_ script: String) async throws -> (status: Int32, output: String) {
         try await run(URL(fileURLWithPath: "/bin/zsh"), ["-c", script])
     }
