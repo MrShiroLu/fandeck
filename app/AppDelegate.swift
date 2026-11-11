@@ -7,6 +7,18 @@ extension NSWindow {
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     static var launchedHidden = false
+    static var openMainWindow: (() -> Void)?
+
+    /// Brings the main window back from the menu bar, Finder, Spotlight or the Dock
+    static func showMainWindow() {
+        NSApp.setActivationPolicy(.regular)
+        if let window = NSApp.windows.first(where: \.isMainAppWindow) {
+            window.makeKeyAndOrderFront(nil)
+        } else {
+            openMainWindow?()
+        }
+        NSApp.activate()
+    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         if !Installer.inApplications && Installer.moveToApplications() {
@@ -31,8 +43,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
-        NSApp.setActivationPolicy(.regular)
-        return true
+        // SwiftUI doesn't reopen a closed Window scene by itself while the app is a menu bar accessory
+        if !hasVisibleWindows { Self.showMainWindow() }
+        return false
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }

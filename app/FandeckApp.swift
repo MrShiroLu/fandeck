@@ -4,8 +4,12 @@ import SwiftUI
 struct FandeckApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     @StateObject private var model = AppModel.shared
+    @Environment(\.openWindow) private var openWindow
 
     var body: some Scene {
+        // The delegate has no SwiftUI environment; hand it a way to bring the window back
+        let _ = AppDelegate.openMainWindow = { openWindow(id: "main") }
+
         Window("Fandeck", id: "main") {
             ContentView().environmentObject(model).preferredColorScheme(.dark)
         }
