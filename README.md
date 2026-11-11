@@ -4,16 +4,16 @@
 
 <p align="center">A macOS app that sets your wallpaper and matches the kitty terminal and the system accent color to it.</p>
 
-Fandeck uses [pywal16](https://github.com/eylles/pywal16) to pull a palette out of the wallpaper. When you pick an image, Fandeck sets it on every Space, generates a 16 color palette, reloads kitty with that palette and sets the macOS accent color to the closest system color. The app window takes on the same colors.
+Fandeck uses [pywal16](https://github.com/eylles/pywal16) to pull a palette out of the wallpaper. When you pick an image, Fandeck sets it on every Space, generates a 16 color palette, reloads kitty with that palette and sets the macOS accent and text highlight colors to match. The app window takes on the same colors.
 
 The name comes from the fan decks painters use to pick paint colors.
 
-![The Gallery page](docs/screenshots/gallery.png)
+![Gallery page](docs/screenshots/gallery.png)
 
 ## Features
 
 - Gallery: shows every image in your wallpaper folders. Click one to apply it, or drop an image file onto the window.
-- Wallpaper folders: choose which folders Fandeck reads from. It starts with `~/Pictures/Wallpapers`. Subfolders are included, and images you add or delete in Finder show up right away. An image applied from anywhere else is copied into the first folder so it stays available.
+- Wallpaper folders: choose which folders Fandeck reads from. It starts with `~/Pictures/Wallpapers`. Subfolders are included, and images you add or delete in Finder show up right away. An image applied from anywhere else is copied into the primary folder, the first one in the list, so it stays available.
 - Collage: combine up to 9 images in a grid, feature, column or row layout. You can adjust the spacing, corner radius and background color. Collages are saved at your screen's full resolution.
 - Schedule: change the wallpaper by day and time, for example a light image on weekday mornings and a dark one every evening. A rule stays in effect until the next rule fires. If the Mac was asleep when a rule was due, it runs on wake.
 - System Settings sync: if you change the wallpaper in System Settings, Fandeck updates the colors to match.
@@ -55,6 +55,8 @@ pipx install pywal16
 python3 fandeck.py --set ~/Pictures/some-wallpaper.jpg
 ```
 
+Without `--set` the script only updates the colors. Without a path it uses the current wallpaper.
+
 ## kitty
 
 The Setup page adds this line to the top of `~/.config/kitty/kitty.conf` and keeps a backup of the old file:
@@ -69,8 +71,8 @@ Settings further down in your config, such as `background_opacity`, still take e
 
 | File | Role |
 | --- | --- |
-| `fandeck.py` | Runs `wal` on the image, picks the most vivid palette color, maps it to the nearest `AppleAccentColor` and notifies running apps of the change. With `--set` it also sets the wallpaper on every Space. |
-| `app/` | The SwiftUI app. It runs the bundled script and watches the wallpaper store to catch changes made in System Settings. |
+| `fandeck.py` | Runs `wal` on the image, picks the most vivid palette color, maps it to the nearest `AppleAccentColor`, sets a matching `AppleHighlightColor` and notifies running apps of the change. With `--set` it also sets the wallpaper on every Space. |
+| `app/` | The SwiftUI app. It runs the bundled script, watches the wallpaper store to catch changes made in System Settings and watches your wallpaper folders for new images. |
 | `tools/make-icon.swift` | Draws the app icon with CoreGraphics. `tools/make-icon.sh` turns the drawing into `AppIcon.icns`. |
 | `tests/` | Logic tests for the schedule, collage layouts, thumbnails, folder scanning and file watching. Run them with `./build.sh test`. |
 
@@ -81,7 +83,19 @@ Settings further down in your config, such as `background_opacity`, still take e
 - macOS has eight accent colors: graphite and seven hues. Fandeck picks the closest one, so the accent will not match the wallpaper exactly. Mostly gray wallpapers end up graphite.
 - Other apps can't be recolored from outside. Apps that support pywal, such as VS Code or Firefox with pywalfox, can read the palette from `~/.cache/wal`.
 - Applying a wallpaper from Fandeck replaces separate per-Space wallpapers with one image.
-- The app is ad-hoc signed. macOS may ask you to approve it in System Settings › Privacy & Security on first launch, and it asks for folder access again after every new build.
+- On a MacBook with a notch the menu bar icon can end up hidden behind it. Opening Fandeck from Spotlight or the Applications folder brings the window back.
+- The app is ad-hoc signed, so macOS asks for folder access again after every new build.
+
+## Uninstall
+
+Turn off open at login on the Setup page, quit Fandeck from the menu bar, then run:
+
+```sh
+rm -rf /Applications/Fandeck.app ~/Library/Application\ Support/Fandeck
+defaults delete com.vyke.fandeck
+```
+
+To undo the kitty change, delete the two Fandeck lines at the top of `~/.config/kitty/kitty.conf` or restore `kitty.conf.fandeck-backup` from the same folder. The accent color stays as it was last set. You can pick another one in System Settings › Appearance.
 
 ## License
 
