@@ -1,4 +1,4 @@
-// Fandeck icon: a fan of paint chips, one palette per wallpaper.
+// Fandeck icon: a picture on the left, the same picture reduced to flat palette bands on the right.
 // Usage: swift tools/make-icon.swift out.png
 import CoreGraphics
 import Foundation
@@ -21,54 +21,63 @@ func rounded(_ r: CGRect, _ radius: CGFloat) -> CGPath {
     CGPath(roundedRect: r, cornerWidth: radius, cornerHeight: radius, transform: nil)
 }
 
+let ink: UInt32 = 0x141419
+// Night sky, its horizon glow, and the hill: the same four colors fill the palette half
+let bands: [UInt32] = [0x10283C, 0x1F5C6B, 0xE3A857, 0x2A1B2E]
+
 // Body, on the macOS icon grid: 824 px with ~185 px corners
 let body = CGRect(x: 100, y: 100, width: 824, height: 824)
 ctx.saveGState()
 ctx.setShadow(offset: CGSize(width: 0, height: -12), blur: 28, color: color(0, 0.35))
 ctx.addPath(rounded(body, 185))
-ctx.setFillColor(color(0x1D1D22))
+ctx.setFillColor(color(ink))
 ctx.fillPath()
 ctx.restoreGState()
 
-// Paint chip: four bands over a paper label with a rivet at the pivot
-let pivot = CGPoint(x: 512, y: 742)
-let chip = CGRect(x: 397, y: 222, width: 230, height: 570)
-let label: CGFloat = 122
+let card = CGRect(x: 196, y: 236, width: 632, height: 552)
+ctx.saveGState()
+ctx.setShadow(offset: CGSize(width: 0, height: -6), blur: 30, color: color(0, 0.5))
+ctx.addPath(rounded(card, 44))
+ctx.setFillColor(color(bands[0]))
+ctx.fillPath()
+ctx.restoreGState()
 
-func drawChip(_ bands: [UInt32], angle: CGFloat) {
-    ctx.saveGState()
-    ctx.translateBy(x: pivot.x, y: pivot.y)
-    ctx.rotate(by: angle * .pi / 180)
-    ctx.translateBy(x: -pivot.x, y: -pivot.y)
+ctx.saveGState()
+ctx.addPath(rounded(card, 44))
+ctx.clip()
 
-    ctx.saveGState()
-    ctx.setShadow(offset: CGSize(width: 0, height: -8), blur: 24, color: color(0, 0.45))
-    ctx.addPath(rounded(chip, 22))
-    ctx.setFillColor(color(0xF4F0E8))
-    ctx.fillPath()
-    ctx.restoreGState()
+// Picture half
+let left = CGRect(x: card.minX, y: card.minY, width: card.width / 2, height: card.height)
+ctx.saveGState()
+ctx.clip(to: left)
+let sky = CGGradient(colorsSpace: space, colors: [color(bands[0]), color(bands[1]), color(bands[2])] as CFArray,
+                     locations: [0, 0.6, 0.82])!
+ctx.drawLinearGradient(sky, start: CGPoint(x: 0, y: card.minY), end: CGPoint(x: 0, y: card.maxY), options: [.drawsAfterEndLocation])
+ctx.setFillColor(color(0xF4E9D0))
+ctx.fillEllipse(in: CGRect(x: left.midX - 46, y: card.minY + 110, width: 92, height: 92))
+let hill = CGMutablePath()
+hill.move(to: CGPoint(x: left.minX, y: card.maxY))
+hill.addLine(to: CGPoint(x: left.minX, y: card.minY + 430))
+hill.addQuadCurve(to: CGPoint(x: left.maxX + 40, y: card.minY + 470), control: CGPoint(x: left.midX, y: card.minY + 360))
+hill.addLine(to: CGPoint(x: left.maxX + 40, y: card.maxY))
+hill.closeSubpath()
+ctx.addPath(hill)
+ctx.setFillColor(color(bands[3]))
+ctx.fillPath()
+ctx.restoreGState()
 
-    ctx.saveGState()
-    ctx.addPath(rounded(chip, 22))
-    ctx.clip()
-    let band = (chip.height - label) / CGFloat(bands.count)
-    for (i, c) in bands.enumerated() {
-        ctx.setFillColor(color(c))
-        ctx.fill(CGRect(x: chip.minX, y: chip.minY + CGFloat(i) * band, width: chip.width, height: band + 1))
-    }
-    ctx.restoreGState()
-    ctx.restoreGState()
+// Palette half
+let right = CGRect(x: left.maxX, y: card.minY, width: card.width / 2, height: card.height)
+let band = right.height / CGFloat(bands.count)
+for (i, c) in bands.enumerated() {
+    ctx.setFillColor(color(c))
+    ctx.fill(CGRect(x: right.minX, y: right.minY + CGFloat(i) * band, width: right.width, height: band + 1))
 }
+ctx.restoreGState()
 
-drawChip([0x173F4A, 0x2B6B78, 0x5E9EA0, 0xA8CFC8], angle: -26)
-drawChip([0x6E2F1B, 0xA9522B, 0xD98848, 0xF0C285], angle: 26)
-drawChip([0x23244A, 0x48508F, 0x8E86C4, 0xDCC5DA], angle: 0)
-
-// Rivet holding the fan together
-ctx.setFillColor(color(0x1D1D22))
-ctx.fillEllipse(in: CGRect(x: pivot.x - 22, y: pivot.y - 22, width: 44, height: 44))
-ctx.setFillColor(color(0xB9B2A6))
-ctx.fillEllipse(in: CGRect(x: pivot.x - 12, y: pivot.y - 12, width: 24, height: 24))
+// Seam between picture and palette
+ctx.setFillColor(color(ink))
+ctx.fill(CGRect(x: card.midX - 5, y: card.minY, width: 10, height: card.height))
 
 let out = URL(fileURLWithPath: CommandLine.arguments.dropFirst().first ?? "icon.png")
 let dest = CGImageDestinationCreateWithURL(out as CFURL, UTType.png.identifier as CFString, 1, nil)!
