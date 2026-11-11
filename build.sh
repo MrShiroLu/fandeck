@@ -5,7 +5,7 @@ cd "$(dirname "$0")"
 
 if [ "$1" = "test" ]; then
     mkdir -p build
-    swiftc -swift-version 5 -parse-as-library -target arm64-apple-macos14 \
+    swiftc -swift-version 5 -parse-as-library -target "$(uname -m)-apple-macos14" \
         $(ls app/*.swift | grep -v FandeckApp.swift) tests/*.swift -o build/tests
     exec build/tests build/test-output
 fi
@@ -13,8 +13,13 @@ fi
 APP=build/Fandeck.app
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
-swiftc -O -swift-version 5 -parse-as-library -target arm64-apple-macos14 \
-    app/*.swift -o "$APP/Contents/MacOS/Fandeck"
+# One binary for Apple silicon and Intel
+for ARCH in arm64 x86_64; do
+    swiftc -O -swift-version 5 -parse-as-library -target "$ARCH-apple-macos14" \
+        app/*.swift -o "build/Fandeck-$ARCH"
+done
+lipo -create build/Fandeck-arm64 build/Fandeck-x86_64 -output "$APP/Contents/MacOS/Fandeck"
+rm build/Fandeck-arm64 build/Fandeck-x86_64
 cp app/Info.plist "$APP/Contents/"
 cp app/AppIcon.icns fandeck.py "$APP/Contents/Resources/"
 codesign --force -s - "$APP"

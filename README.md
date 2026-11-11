@@ -32,7 +32,7 @@ The name comes from the fan decks painters use to pick paint colors.
 
 ## Requirements
 
-- macOS 14 or later on Apple silicon
+- macOS 14 or later, on Apple silicon or Intel
 - Xcode Command Line Tools to build the app
 - Homebrew, Python 3, ImageMagick and pywal16. The Setup page can install the last three for you.
 
