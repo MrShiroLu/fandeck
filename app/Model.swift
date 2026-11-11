@@ -99,8 +99,8 @@ final class AppModel: ObservableObject {
         Task {
             do {
                 let url = try importIfNeeded(source)
-                // wallmatch.py --set sets the wallpaper: NSWorkspace only changes the active Space
-                let output = try await Tools.wallmatch(["--force", "--set", url.path])
+                // fandeck.py --set sets the wallpaper: NSWorkspace only changes the active Space
+                let output = try await Tools.runScript(["--force", "--set", url.path])
                 status = output.isEmpty ? "Done" : output
             } catch {
                 status = "Error: \(error.localizedDescription)"
@@ -120,7 +120,7 @@ final class AppModel: ObservableObject {
         guard !busy else { return }
         busy = true
         Task {
-            do { status = try await Tools.wallmatch(["--force"]) } catch { status = "Error: \(error.localizedDescription)" }
+            do { status = try await Tools.runScript(["--force"]) } catch { status = "Error: \(error.localizedDescription)" }
             reload()
             busy = false
         }
@@ -153,7 +153,7 @@ final class AppModel: ObservableObject {
         guard followSystem, !busy else { return }
         Task {
             // If we made the change ourselves, the script sees the cached path and exits early
-            _ = try? await Tools.wallmatch([])
+            _ = try? await Tools.runScript([])
             reload()
         }
     }

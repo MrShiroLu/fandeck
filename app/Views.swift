@@ -221,7 +221,7 @@ struct MenuBarContent: View {
             Toggle(isOn: $model.scheduleEnabled) { Label("Schedule", systemImage: "clock") }
                 .toggleStyle(.switch).controlSize(.small).padding(.horizontal, 6)
             Divider()
-            row("Open wallMatch", "macwindow") { openMain() }
+            row("Open Fandeck", "macwindow") { openMain() }
             row("Quit", "power") { NSApp.terminate(nil) }
         }
         .padding(14)

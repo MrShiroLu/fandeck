@@ -5,7 +5,7 @@ import SwiftUI
 let home = FileManager.default.homeDirectoryForCurrentUser
 let walCache = home.appendingPathComponent(".cache/wal")
 let defaultLibrary = home.appendingPathComponent("Downloads/Wallpapers")
-let supportDir = home.appendingPathComponent("Library/Application Support/wallMatch")
+let supportDir = home.appendingPathComponent("Library/Application Support/Fandeck")
 let wallpaperIndex = home.appendingPathComponent("Library/Application Support/com.apple.wallpaper/Store/Index.plist")
 let imageExtensions: Set<String> = ["png", "jpg", "jpeg", "heic", "webp", "tiff", "bmp"]
 
@@ -42,7 +42,7 @@ struct Palette {
     var colors: [Color]
     var hexes: [String]
 
-    // Same pick as wallmatch.py: the most vivid of color1...color6
+    // Same pick as fandeck.py: the most vivid of color1...color6
     var accent: Color { colors[1...6].max { $0.vividness < $1.vividness } ?? foreground }
 
     static func load() -> Palette? {
@@ -100,14 +100,14 @@ enum Tools {
         try await run(URL(fileURLWithPath: "/bin/zsh"), ["-c", script])
     }
 
-    /// Runs the bundled wallmatch.py and returns the last line of its output
-    static func wallmatch(_ args: [String]) async throws -> String {
-        guard let script = Bundle.main.url(forResource: "wallmatch", withExtension: "py") else {
-            throw Failure("wallmatch.py is missing from the app bundle")
+    /// Runs the bundled fandeck.py and returns the last line of its output
+    static func runScript(_ args: [String]) async throws -> String {
+        guard let script = Bundle.main.url(forResource: "fandeck", withExtension: "py") else {
+            throw Failure("fandeck.py is missing from the app bundle")
         }
         guard let python = find("python3") else { throw Failure("Python 3 not found, see the Setup page") }
         let r = try await run(python, [script.path] + args)
-        if r.status != 0 { throw Failure(r.output.isEmpty ? "wallmatch.py failed" : r.output) }
+        if r.status != 0 { throw Failure(r.output.isEmpty ? "fandeck.py failed" : r.output) }
         return r.output.components(separatedBy: "\n").last ?? ""
     }
 }

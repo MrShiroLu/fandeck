@@ -1,4 +1,4 @@
-// wallMatch icon: a fan of paint chips, one palette per wallpaper.
+// Fandeck icon: a fan of paint chips, one palette per wallpaper.
 // Usage: swift tools/make-icon.swift out.png
 import CoreGraphics
 import Foundation

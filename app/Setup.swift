@@ -5,7 +5,7 @@ import SwiftUI
 /// First-launch install: live in /Applications and open at login
 @MainActor
 enum Installer {
-    static let target = URL(fileURLWithPath: "/Applications/wallMatch.app")
+    static let target = URL(fileURLWithPath: "/Applications/Fandeck.app")
 
     static var inApplications: Bool { Bundle.main.bundleURL.standardizedFileURL == target }
 
@@ -91,7 +91,7 @@ final class SetupModel: ObservableObject {
     func generatePalette() {
         running = "palette"
         Task {
-            do { log = try await Tools.wallmatch(["--force"]) } catch { log = error.localizedDescription }
+            do { log = try await Tools.runScript(["--force"]) } catch { log = error.localizedDescription }
             AppModel.shared.reload()
             running = nil
             refresh()
@@ -105,15 +105,15 @@ final class SetupModel: ObservableObject {
             var old = ""
             if fm.fileExists(atPath: Self.kittyConf.path) {
                 old = try String(contentsOf: Self.kittyConf, encoding: .utf8)
-                let backup = Self.kittyConf.appendingPathExtension("wallmatch-backup")
+                let backup = Self.kittyConf.appendingPathExtension("fandeck-backup")
                 try? fm.removeItem(at: backup)
                 try fm.copyItem(at: Self.kittyConf, to: backup)
             }
             // Put it first so the user's own settings (opacity etc.) can still override it.
             // Not atomic, so a dotfiles symlink stays a symlink.
-            let line = "# wallMatch: colors generated from the wallpaper\ninclude ~/.cache/wal/colors-kitty.conf\n\n"
+            let line = "# Fandeck: colors generated from the wallpaper\ninclude ~/.cache/wal/colors-kitty.conf\n\n"
             try (line + old).write(to: Self.kittyConf, atomically: false, encoding: .utf8)
-            log = "Updated kitty.conf" + (old.isEmpty ? "" : " (backup: kitty.conf.wallmatch-backup)")
+            log = "Updated kitty.conf" + (old.isEmpty ? "" : " (backup: kitty.conf.fandeck-backup)")
         } catch {
             log = "Could not write kitty.conf: \(error.localizedDescription)"
         }
@@ -173,7 +173,7 @@ struct SetupView: View {
             } header: {
                 Text("Requirements")
             } footer: {
-                Text("wallMatch uses pywal to pull colors out of the wallpaper.").font(.caption).opacity(0.55)
+                Text("Fandeck uses pywal to pull colors out of the wallpaper.").font(.caption).opacity(0.55)
             }
 
             Section("Integrations") {
@@ -189,7 +189,7 @@ struct SetupView: View {
 
             Section("App") {
                 SetupRow(state: setup.inApplications ? .ok : .missing, title: "Applications folder",
-                         detail: setup.inApplications ? "/Applications/wallMatch.app"
+                         detail: setup.inApplications ? "/Applications/Fandeck.app"
                             : "Running from \(Bundle.main.bundleURL.tildePath)") {
                     if !setup.inApplications {
                         actionButton("Install & Relaunch", id: "apps") { setup.installToApplications() }

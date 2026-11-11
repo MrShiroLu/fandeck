@@ -1,12 +1,14 @@
-<p align="center"><img src="docs/icon.png" width="128" alt="wallMatch icon"></p>
+<p align="center"><img src="docs/icon.png" width="128" alt="Fandeck icon"></p>
 
-<h1 align="center">wallMatch</h1>
+<h1 align="center">Fandeck</h1>
 
 <p align="center">Pick a wallpaper, and the rest of your Mac follows: the kitty terminal, the system accent color, and the app itself.</p>
 
 ---
 
-wallMatch is a small macOS app built around [pywal](https://github.com/eylles/pywal16). When you set a wallpaper it:
+Named after a painter's fan deck of paint chips: every wallpaper gets its own strip of colors.
+
+Fandeck is a small macOS app built around [pywal](https://github.com/eylles/pywal16). When you set a wallpaper it:
 
 - puts the image on **every Space** (not just the one you're on),
 - generates a 16-color palette from it,
@@ -36,10 +38,10 @@ From a clone of this repo:
 
 ```sh
 ./build.sh
-open build/wallMatch.app
+open build/Fandeck.app
 ```
 
-On first launch wallMatch moves itself to `/Applications`, relaunches from there, and turns on **Open at login**, so the schedule and System Settings sync keep running. You can turn the login item off on the **Setup** tab, and it stays off. Then go through the rest of the Setup tab.
+On first launch Fandeck moves itself to `/Applications`, relaunches from there, and turns on **Open at login**, so the schedule and System Settings sync keep running. You can turn the login item off on the **Setup** tab, and it stays off. Then go through the rest of the Setup tab.
 
 `./build.sh --install` copies the app straight to `/Applications` instead.
 
@@ -47,7 +49,7 @@ To use only the script without the app:
 
 ```sh
 pipx install pywal16
-python3 wallmatch.py --set ~/Pictures/some-wallpaper.jpg
+python3 fandeck.py --set ~/Pictures/some-wallpaper.jpg
 ```
 
 ## kitty
@@ -58,21 +60,21 @@ The Setup page adds this line to the top of `~/.config/kitty/kitty.conf` (a back
 include ~/.cache/wal/colors-kitty.conf
 ```
 
-Anything later in your config, such as `background_opacity`, still overrides it. wallMatch sends kitty `SIGUSR1` to reload the config.
+Anything later in your config, such as `background_opacity`, still overrides it. Fandeck sends kitty `SIGUSR1` to reload the config.
 
 ## How it works
 
 | Piece | What it does |
 | --- | --- |
-| `wallmatch.py` | Runs `wal` on the image, picks the most vivid palette color, maps it to the nearest `AppleAccentColor` and posts the color-change notifications. With `--set`, it also writes the wallpaper to every Space. |
+| `fandeck.py` | Runs `wal` on the image, picks the most vivid palette color, maps it to the nearest `AppleAccentColor` and posts the color-change notifications. With `--set`, it also writes the wallpaper to every Space. |
 | `app/` | The SwiftUI app. It runs the bundled script, and watches the wallpaper store to catch changes made in System Settings. |
 | `tools/make-icon.swift` | Draws the app icon with CoreGraphics. `tools/make-icon.sh` turns it into `AppIcon.icns`. |
 
-macOS's `NSWorkspace.setDesktopImageURL` only changes the current Space. To set the wallpaper everywhere, `wallmatch.py --set` writes the same record that **Show on all Spaces** in System Settings writes. That record lives in `~/Library/Application Support/com.apple.wallpaper/Store/Index.plist`. The script then restarts `WallpaperAgent` so the change is picked up.
+macOS's `NSWorkspace.setDesktopImageURL` only changes the current Space. To set the wallpaper everywhere, `fandeck.py --set` writes the same record that **Show on all Spaces** in System Settings writes. That record lives in `~/Library/Application Support/com.apple.wallpaper/Store/Index.plist`. The script then restarts `WallpaperAgent` so the change is picked up.
 
 ## Limitations
 
 - macOS only offers eight accent colors (graphite plus seven hues), so the accent is the closest match, not the exact color. Mostly gray wallpapers give graphite.
 - Other apps' window backgrounds can't be themed system-wide. Apps with pywal support (VS Code, Firefox through pywalfox, and others) can read `~/.cache/wal` themselves.
-- Applying a wallpaper from wallMatch replaces per-Space wallpapers with a single one.
+- Applying a wallpaper from Fandeck replaces per-Space wallpapers with a single one.
 - The app is ad-hoc signed. The first time you open it, macOS may ask you to confirm in System Settings › Privacy & Security.

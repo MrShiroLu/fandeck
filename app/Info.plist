@@ -3,11 +3,11 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleIdentifier</key>
-    <string>com.vyke.wallmatch.app</string>
+    <string>com.vyke.fandeck</string>
     <key>CFBundleName</key>
-    <string>wallMatch</string>
+    <string>Fandeck</string>
     <key>CFBundleExecutable</key>
-    <string>wallMatch</string>
+    <string>Fandeck</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>

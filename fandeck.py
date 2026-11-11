@@ -102,7 +102,7 @@ def main():
 
     # If two runs start at once, the second waits here and then exits via the cache check
     WAL_CACHE.mkdir(parents=True, exist_ok=True)
-    lock = open(WAL_CACHE / "wallmatch.lock", "w")
+    lock = open(WAL_CACHE / "fandeck.lock", "w")
     fcntl.flock(lock, fcntl.LOCK_EX)
 
     if "--set" in args:
