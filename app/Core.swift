@@ -45,6 +45,12 @@ struct Palette {
     // Same pick as fandeck.py: the most vivid of color1...color6
     var accent: Color { colors[1...6].max { $0.vividness < $1.vividness } ?? foreground }
 
+    /// pywal's light palettes have a light background
+    var isLight: Bool {
+        guard let c = NSColor(background).usingColorSpace(.sRGB) else { return false }
+        return 0.299 * c.redComponent + 0.587 * c.greenComponent + 0.114 * c.blueComponent > 0.5
+    }
+
     static func load() -> Palette? {
         guard let data = try? Data(contentsOf: walCache.appendingPathComponent("colors.json")),
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -58,6 +64,13 @@ struct Palette {
         guard list.count == 16 else { return nil }
         return Palette(background: bg, foreground: fg, colors: list, hexes: hexes)
     }
+}
+
+enum PaletteTheme: String, CaseIterable, Identifiable {
+    case auto, dark, light
+
+    var id: Self { self }
+    var label: String { rawValue.capitalized }
 }
 
 // MARK: - External commands
@@ -109,7 +122,9 @@ enum Tools {
             throw Failure("fandeck.py is missing from the app bundle")
         }
         guard let python = find("python3") else { throw Failure("Python 3 not found, see the Setup page") }
-        let r = try await run(python, [script.path] + args)
+        // The palette style from the Setup page applies to every run
+        let theme = UserDefaults.standard.string(forKey: "theme") ?? PaletteTheme.dark.rawValue
+        let r = try await run(python, [script.path] + args + ["--theme", theme])
         if r.status != 0 { throw Failure(r.output.isEmpty ? "fandeck.py failed" : r.output) }
         return r.output.components(separatedBy: "\n").last ?? ""
     }

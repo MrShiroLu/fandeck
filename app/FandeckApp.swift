@@ -11,7 +11,7 @@ struct FandeckApp: App {
         let _ = AppDelegate.openMainWindow = { openWindow(id: "main") }
 
         Window("Fandeck", id: "main") {
-            ContentView().environmentObject(model).preferredColorScheme(.dark)
+            ContentView().environmentObject(model).preferredColorScheme(model.palette?.isLight == true ? .light : .dark)
         }
         .windowStyle(.hiddenTitleBar)
         .defaultSize(width: 1000, height: 740)

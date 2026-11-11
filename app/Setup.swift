@@ -209,6 +209,15 @@ struct SetupView: View {
                     actionButton(setup.hasPalette ? "Regenerate" : "Generate", id: "palette") { setup.generatePalette() }
                         .disabled(setup.python == nil || setup.magick == nil || setup.wal == nil)
                 }
+                SetupRow(state: .none, title: "Palette style", detail: themeDetail) {
+                    Picker("Palette style", selection: $model.theme) {
+                        ForEach(PaletteTheme.allCases) { Text($0.label).tag($0) }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .fixedSize()
+                    .disabled(model.busy)
+                }
             } header: {
                 Text("Requirements")
             } footer: {
@@ -284,6 +293,14 @@ struct SetupView: View {
         .onAppear { setup.refresh() }
     }
 
+    private var themeDetail: String {
+        switch model.theme {
+        case .auto: "Light colors for bright wallpapers, dark colors for the rest"
+        case .dark: "Dark backgrounds in kitty, Ghostty and this window"
+        case .light: "Light backgrounds in kitty, Ghostty and this window"
+        }
+    }
+
     private var loginDetail: String {
         switch setup.loginStatus {
         case .enabled: "Starts in the menu bar when you log in"
@@ -316,7 +333,7 @@ struct SetupView: View {
     }
 }
 
-enum SetupState { case ok, missing, optional }
+enum SetupState { case ok, missing, optional, none }
 
 struct SetupRow<Trailing: View>: View {
     @EnvironmentObject var model: AppModel
@@ -331,7 +348,7 @@ struct SetupRow<Trailing: View>: View {
         } label: {
             HStack(alignment: .firstTextBaseline, spacing: 10) {
                 Circle()
-                    .fill(state == .ok ? Color.green : state == .missing ? Color.orange : model.fg.opacity(0.25))
+                    .fill(state == .ok ? Color.green : state == .missing ? Color.orange : state == .none ? Color.clear : model.fg.opacity(0.25))
                     .frame(width: 8, height: 8)
                     .alignmentGuide(.firstTextBaseline) { $0[.bottom] - 1 }
                 VStack(alignment: .leading, spacing: 2) {

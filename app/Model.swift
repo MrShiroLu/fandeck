@@ -26,6 +26,12 @@ final class AppModel: ObservableObject {
             scan()
         }
     }
+    @Published var theme: PaletteTheme {
+        didSet {
+            UserDefaults.standard.set(theme.rawValue, forKey: "theme")
+            refreshColors()
+        }
+    }
     @Published var followSystem: Bool {
         didSet {
             UserDefaults.standard.set(followSystem, forKey: "followSystem")
@@ -84,6 +90,7 @@ final class AppModel: ObservableObject {
     private init() {
         folders = (UserDefaults.standard.stringArray(forKey: "folders") ?? [defaultLibrary.path]).map { URL(fileURLWithPath: $0) }
         followSystem = UserDefaults.standard.object(forKey: "followSystem") as? Bool ?? true
+        theme = UserDefaults.standard.string(forKey: "theme").flatMap(PaletteTheme.init) ?? .dark
         let schedule = ScheduleState.load()
         rules = schedule.rules
         scheduleEnabled = schedule.enabled
