@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Match colors to the wallpaper: pywal palette -> kitty, Ghostty, macOS accent and highlight colors."""
+import argparse
 import colorsys
 import fcntl
 import json
@@ -87,6 +88,20 @@ def set_wallpaper_everywhere(path):
     subprocess.run(["killall", "WallpaperAgent"], capture_output=True)
 
 
+def is_bright(image):
+    """True when the image's mean brightness is above the middle, measured with ImageMagick like pywal does."""
+    magick = shutil.which("magick")
+    cmd = [magick] if magick else [shutil.which("convert") or "convert"]
+    # The jpeg:size hint lets ImageMagick decode large JPEGs at a fraction of their size
+    out = subprocess.run(cmd + ["-define", "jpeg:size=256x256", image + "[0]", "-resize", "64x64!",
+                                "-colorspace", "Gray", "-format", "%[fx:mean]", "info:"],
+                         capture_output=True, text=True)
+    try:
+        return float(out.stdout.strip()) > 0.5
+    except ValueError:
+        return False
+
+
 def reload_terminals():
     # On SIGUSR1 kitty reloads kitty.conf, including the wal colors it includes
     subprocess.run(["pkill", "-USR1", "-x", "kitty"])
@@ -95,10 +110,14 @@ def reload_terminals():
 
 
 def main():
-    args = sys.argv[1:]
-    force = "--force" in args
-    paths = [a for a in args if not a.startswith("--")]
-    wallpaper = paths[0] if paths else current_wallpaper()
+    parser = argparse.ArgumentParser(description="Match kitty, Ghostty and the macOS accent color to a wallpaper.")
+    parser.add_argument("wallpaper", nargs="?", help="image to use, the current wallpaper if left out")
+    parser.add_argument("--set", action="store_true", help="also set the image as the wallpaper on every Space")
+    parser.add_argument("--force", action="store_true", help="regenerate the colors even if nothing changed")
+    parser.add_argument("--theme", choices=["dark", "light", "auto"], default="dark",
+                        help="palette style; auto uses light colors for bright images")
+    args = parser.parse_args()
+    wallpaper = args.wallpaper or current_wallpaper()
     if not wallpaper or not os.path.isfile(wallpaper):
         print(f"wallpaper file not found: {wallpaper!r}")
         return 1
@@ -108,21 +127,26 @@ def main():
     lock = open(WAL_CACHE / "fandeck.lock", "w")
     fcntl.flock(lock, fcntl.LOCK_EX)
 
-    if "--set" in args:
+    if args.set:
         set_wallpaper_everywhere(wallpaper)
 
     last = WAL_CACHE / "wal"
-    if not force and last.exists() and last.read_text().strip() == wallpaper:
+    last_theme = WAL_CACHE / "fandeck-theme"
+    unchanged = (last.exists() and last.read_text().strip() == wallpaper
+                 and last_theme.exists() and last_theme.read_text().strip() == args.theme)
+    if unchanged and not args.force:
         return 0
 
+    light = args.theme == "light" or (args.theme == "auto" and is_bright(wallpaper))
     # -n: don't let wal set the wallpaper, -s/-t: no terminal sequences (we reload kitty), -e: no other reloads
-    subprocess.run([WAL, "-n", "-s", "-t", "-e", "-q", "-i", wallpaper], check=True)
+    subprocess.run([WAL, "-n", "-s", "-t", "-e", "-q", *(["-l"] if light else []), "-i", wallpaper], check=True)
+    last_theme.write_text(args.theme)
 
     colors = json.loads((WAL_CACHE / "colors.json").read_text())["colors"]
     accent_hex = pick_accent(colors)
     accent = set_macos_colors(accent_hex)
     reload_terminals()
-    print(f"Accent {accent_hex}, closest macOS color: {ACCENT_NAMES[accent]}")
+    print(f"Accent {accent_hex}, closest macOS color: {ACCENT_NAMES[accent]}" + (", light palette" if light else ""))
     return 0
 
 
