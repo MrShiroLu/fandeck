@@ -146,18 +146,18 @@ struct SetupView: View {
         Form {
             Section {
                 SetupRow(state: setup.brew != nil ? .ok : .optional, title: "Homebrew",
-                         detail: setup.brew?.path ?? "Needed to install Python and pipx") {
+                         detail: setup.brew?.tildePath ?? "Needed to install Python and pipx") {
                     if setup.brew == nil { Link("brew.sh", destination: URL(string: "https://brew.sh")!) }
                 }
                 SetupRow(state: setup.python != nil ? .ok : .missing, title: "Python 3",
-                         detail: setup.python?.path ?? "Not found") {
+                         detail: setup.python?.tildePath ?? "Not found") {
                     if setup.python == nil {
                         actionButton("Install", id: "python") { setup.run("python", "brew install python") }
                             .disabled(setup.brew == nil)
                     }
                 }
                 SetupRow(state: setup.wal != nil ? .ok : .missing, title: "pywal16",
-                         detail: setup.wal?.path ?? "Extracts a 16-color palette from the wallpaper") {
+                         detail: setup.wal?.tildePath ?? "Extracts a 16-color palette from the wallpaper") {
                     if setup.wal == nil {
                         actionButton("Install", id: "wal") {
                             setup.run("wal", "command -v pipx >/dev/null || brew install pipx; pipx install pywal16")
