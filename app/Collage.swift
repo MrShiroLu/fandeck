@@ -18,6 +18,15 @@ enum CollageLayout: String, CaseIterable, Identifiable {
     }
 }
 
+/// Work-in-progress collage; lives in the model so switching tabs keeps it
+struct CollageDraft {
+    var selected: [URL] = []
+    var layout = CollageLayout.grid
+    var gap = 0.012
+    var radius = 0.01
+    var background: Color?
+}
+
 struct CollageSpec {
     var layout: CollageLayout
     var gap: CGFloat     // fraction of canvas width
@@ -119,11 +128,6 @@ enum Collage {
 
 struct CollageView: View {
     @EnvironmentObject var model: AppModel
-    @State private var selected: [URL] = []
-    @State private var layout = CollageLayout.grid
-    @State private var gap = 0.012
-    @State private var radius = 0.01
-    @State private var background: Color?
     @State private var preview: CGImage?
     @State private var saving = false
     @State private var message = ""
@@ -131,6 +135,12 @@ struct CollageView: View {
     private struct PreviewKey: Hashable {
         var urls: [URL], layout: CollageLayout, gap: Double, radius: Double, background: Color
     }
+
+    private var selected: [URL] { model.collage.selected }
+    private var layout: CollageLayout { model.collage.layout }
+    private var gap: Double { model.collage.gap }
+    private var radius: Double { model.collage.radius }
+    private var background: Color? { model.collage.background }
 
     private var spec: CollageSpec {
         CollageSpec(layout: layout, gap: gap, radius: radius, background: NSColor(background ?? model.bg).cgColor)
@@ -147,7 +157,7 @@ struct CollageView: View {
                 Text("Pick images in order").font(.headline)
                 Text("\(selected.count) of \(Collage.maxCount)").font(.callout.monospacedDigit()).opacity(0.55)
                 Spacer()
-                if !selected.isEmpty { Button("Clear Selection") { selected = [] }.buttonStyle(.borderless) }
+                if !selected.isEmpty { Button("Clear Selection") { model.collage.selected = [] }.buttonStyle(.borderless) }
             }
             ScrollView { grid }
         }
@@ -185,7 +195,7 @@ struct CollageView: View {
             Text("Collage").font(.title2.weight(.semibold))
             VStack(alignment: .leading, spacing: 6) {
                 Text("Layout").font(.caption).opacity(0.6)
-                Picker("Layout", selection: $layout) {
+                Picker("Layout", selection: $model.collage.layout) {
                     ForEach(CollageLayout.allCases) { Image(systemName: $0.symbol).help($0.rawValue).tag($0) }
                 }
                 .pickerStyle(.segmented)
@@ -193,13 +203,13 @@ struct CollageView: View {
             }
             VStack(alignment: .leading, spacing: 2) {
                 Text("Spacing").font(.caption).opacity(0.6)
-                Slider(value: $gap, in: 0...0.04)
+                Slider(value: $model.collage.gap, in: 0...0.04)
             }
             VStack(alignment: .leading, spacing: 2) {
                 Text("Corner radius").font(.caption).opacity(0.6)
-                Slider(value: $radius, in: 0...0.04)
+                Slider(value: $model.collage.radius, in: 0...0.04)
             }
-            ColorPicker("Background", selection: Binding { background ?? model.bg } set: { background = $0 }, supportsOpacity: false)
+            ColorPicker("Background", selection: Binding { background ?? model.bg } set: { model.collage.background = $0 }, supportsOpacity: false)
             HStack {
                 Button("Save") { save(apply: false) }
                 Button("Save & Apply") { save(apply: true) }.buttonStyle(.borderedProminent)
@@ -238,9 +248,9 @@ struct CollageView: View {
 
     private func toggle(_ url: URL) {
         if let i = selected.firstIndex(of: url) {
-            selected.remove(at: i)
+            model.collage.selected.remove(at: i)
         } else if selected.count < Collage.maxCount {
-            selected.append(url)
+            model.collage.selected.append(url)
         }
     }
 

@@ -18,6 +18,7 @@ final class AppModel: ObservableObject {
     @Published var scanning = false
     @Published var busy = false
     @Published var status = ""
+    @Published var collage = CollageDraft()
     @Published var folders: [URL] {
         didSet {
             UserDefaults.standard.set(folders.map(\.path), forKey: "folders")
