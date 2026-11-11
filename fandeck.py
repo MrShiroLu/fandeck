@@ -18,6 +18,7 @@ WAL = shutil.which("wal") or str(Path.home() / ".local/bin/wal")
 # macOS's fixed accent colors (AppleAccentColor value -> approximate hue in degrees)
 ACCENT_HUES = {0: 0, 1: 30, 2: 52, 3: 120, 4: 210, 5: 280, 6: 330}
 GRAPHITE = -1
+ACCENT_NAMES = {-1: "graphite", 0: "red", 1: "orange", 2: "yellow", 3: "green", 4: "blue", 5: "purple", 6: "pink"}
 
 
 def current_wallpaper():
@@ -119,7 +120,7 @@ def main():
     accent_hex = pick_accent(colors)
     accent = set_macos_colors(accent_hex)
     reload_kitty()
-    print(f"{os.path.basename(wallpaper)} -> accent {accent_hex} (AppleAccentColor={accent})")
+    print(f"{os.path.basename(wallpaper)} · accent {accent_hex} ({ACCENT_NAMES[accent]})")
     return 0
 
 

@@ -53,7 +53,7 @@ struct Palette {
               let bg = special["background"].flatMap(Color.init(hex:)),
               let fg = special["foreground"].flatMap(Color.init(hex:))
         else { return nil }
-        let hexes = (0..<16).compactMap { colors["color\($0)"] }
+        let hexes = (0..<16).compactMap { colors["color\($0)"]?.uppercased() }
         let list = hexes.compactMap(Color.init(hex:))
         guard list.count == 16 else { return nil }
         return Palette(background: bg, foreground: fg, colors: list, hexes: hexes)
