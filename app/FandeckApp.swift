@@ -16,8 +16,10 @@ struct FandeckApp: App {
         .windowStyle(.hiddenTitleBar)
         .defaultSize(width: 1000, height: 740)
 
-        MenuBarExtra("Fandeck", systemImage: "paintpalette.fill") {
+        MenuBarExtra {
             MenuBarContent().environmentObject(model)
+        } label: {
+            Image(nsImage: MenuBarIcon.image)
         }
         .menuBarExtraStyle(.window)
     }
