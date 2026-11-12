@@ -172,10 +172,28 @@ struct Tests {
             check(false, "collage write: \(error)")
         }
 
-        // Thumbnails are scaled down and cached
+        // Thumbnails are scaled down, kept in memory and written to the disk cache
+        // Next to the test folder, not inside it, so the folder scan below doesn't count it
+        ImageLoader.diskDirectory = dir.deletingLastPathComponent().appendingPathComponent("test-thumbnails")
+        try? FileManager.default.removeItem(at: ImageLoader.diskDirectory)
         let thumb = ImageLoader.thumbnail(images[0], maxPixel: 480)
         check(thumb.map { max($0.width, $0.height) == 480 } == true, "thumbnail is scaled to 480 px")
         check(ImageLoader.thumbnail(images[0], maxPixel: 480) === thumb, "second thumbnail comes from the cache")
+        check(ImageLoader.cached(images[0], maxPixel: 480) === thumb, "views can read the cached thumbnail directly")
+        let onDisk = (try? FileManager.default.contentsOfDirectory(atPath: ImageLoader.diskDirectory.path)) ?? []
+        check(onDisk.count == 1 && onDisk[0].hasSuffix(".jpg"), "thumbnail is saved to the disk cache")
+        check(thumb.map { $0.bitsPerPixel == 32 && $0.alphaInfo == .premultipliedFirst } == true,
+              "thumbnail is 32-bit BGRA, so drawing it needs no conversion")
+        var asyncThumb: CGImage?
+        Task { asyncThumb = await ImageLoader.thumbnail(images[1], maxPixel: 300) }
+        wait(5) { asyncThumb != nil }
+        check(asyncThumb.map { max($0.width, $0.height) == 300 } == true, "queued thumbnail loads off the main thread")
+        func cachedFiles() -> Int { ((try? FileManager.default.contentsOfDirectory(atPath: ImageLoader.diskDirectory.path)) ?? []).count }
+        let before = cachedFiles()
+        ImageLoader.prefetch(Array(images[2...3]), maxPixel: 480)
+        wait(10) { cachedFiles() == before + 2 }
+        check(cachedFiles() == before + 2, "prefetch writes missing thumbnails to the disk cache")
+        check(ImageLoader.cached(images[2], maxPixel: 480) == nil, "prefetch leaves memory alone")
 
         // Folder scan finds images in subfolders and skips other files
         try? "notes".write(to: dir.appendingPathComponent("notes.txt"), atomically: true, encoding: .utf8)
