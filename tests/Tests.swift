@@ -43,6 +43,7 @@ struct Tests {
         menuBarIcon()
         collageLayouts()
         files(in: dir)
+        trash(in: dir.deletingLastPathComponent().appendingPathComponent("test-trash"))
 
         print(failures == 0 ? "\nAll tests passed" : "\n\(failures) failed")
         exit(failures == 0 ? 0 : 1)
@@ -145,6 +146,43 @@ struct Tests {
         for x in 0..<36 { for y in 0..<36 where (rep.colorAt(x: x, y: y)?.alphaComponent ?? 0) > 0.5 { ink += 1 } }
         check(ink > 200 && ink < 1000, "menu bar icon covers part of its box (\(ink) of 1296 pixels)")
         check(center < 0.1, "the pivot rivet is cut out of the icon")
+    }
+
+    static func trash(in root: URL) {
+        let fm = FileManager.default
+        try? fm.removeItem(at: root)
+        let folder = root.appendingPathComponent("Wallpapers")
+        try! fm.createDirectory(at: folder, withIntermediateDirectories: true)
+        let image = folder.appendingPathComponent("unwanted.png")
+        writeImage(image, width: 64, height: 40, gray: 0.3)
+        let store = TrashStore(directory: root.appendingPathComponent("Trash"))
+
+        let item = try! store.trash(image)
+        check(!fm.fileExists(atPath: image.path) && fm.fileExists(atPath: store.url(of: item).path),
+              "trashing moves the file out of the wallpaper folder into the trash folder")
+        check(AppModel.listImages(in: [folder]).isEmpty, "a trashed image drops out of the folder scan")
+        try! store.save([item])
+        check(store.load() == [item], "the trash index survives a save and load")
+
+        let back = try! store.putBack(item)
+        check(back.standardizedFileURL.path == image.standardizedFileURL.path && fm.fileExists(atPath: image.path),
+              "Put Back restores the original path")
+
+        let again = try! store.trash(image)
+        writeImage(image, width: 64, height: 40, gray: 0.6)
+        let renamed = try! store.putBack(again)
+        check(renamed.lastPathComponent == "unwanted-2.png" && fm.fileExists(atPath: image.path),
+              "Put Back picks a new name when another file took the old one")
+
+        let gone = try! store.trash(renamed)
+        store.delete(gone)
+        check(!fm.fileExists(atPath: store.url(of: gone).path), "deleting removes the file from the trash folder")
+
+        let now = Date()
+        let fresh = TrashItem(original: "/a.png", stored: "a.png", deleted: now.addingTimeInterval(-29 * 86400))
+        let old = TrashItem(original: "/b.png", stored: "b.png", deleted: now.addingTimeInterval(-31 * 86400))
+        check(store.expired([fresh, old], now: now) == [old], "only items older than 30 days expire")
+        check(store.daysLeft(fresh, now: now) == 1, "an item trashed 29 days ago has 1 day left")
     }
 
     static func collageLayouts() {
