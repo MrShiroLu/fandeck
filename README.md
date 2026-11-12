@@ -13,6 +13,7 @@ The name comes from the fan decks painters use to pick paint colors.
 ## Features
 
 - Gallery: shows every image in your wallpaper folders. Click one to apply it, or drop an image file onto the window. Previous goes back one wallpaper, and its arrow lists the last ten.
+- Trash: right-click an image and choose Move to Trash. The Trash button in the gallery lists trashed images, where you can put them back or delete them for good. Images left there are deleted after 30 days.
 - Wallpaper folders: choose which folders Fandeck reads from. It starts with `~/Pictures/Wallpapers`. Subfolders are included, and images you add or delete in Finder show up right away. An image applied from anywhere else is copied into the primary folder, the first one in the list, so it stays available.
 - Collage: combine up to 9 images in a grid, feature, column or row layout. You can adjust the spacing, corner radius and background color. Collages are saved at your screen's full resolution.
 - Schedule: change the wallpaper by day and time, for example a light image on weekday mornings and a dark one every evening. A rule stays in effect until the next rule fires. If the Mac was asleep when a rule was due, it runs on wake.
@@ -101,7 +102,7 @@ After a new palette, Fandeck sends kitty a `SIGUSR1` signal and Ghostty a `SIGUS
 | `fandeck.py` | Runs `wal` on the image, in light mode when asked or when the image is bright, reloads kitty and Ghostty, picks the most vivid palette color, maps it to the nearest `AppleAccentColor`, sets a matching `AppleHighlightColor` and notifies running apps of the change. With `--set` it also sets the wallpaper on every Space. |
 | `app/` | The SwiftUI app. It runs the bundled script, watches the wallpaper store to catch changes made in System Settings and watches your wallpaper folders for new images. |
 | `tools/make-icon.swift` | Draws the app icon with CoreGraphics. `tools/make-icon.sh` turns the drawing into `AppIcon.icns`. |
-| `tests/` | Logic tests for the schedule, shuffle and history, shortcuts, terminal config edits, palette style, collage layouts, thumbnails, folder scanning and file watching. Run them with `./build.sh test`. |
+| `tests/` | Logic tests for the schedule, shuffle and history, shortcuts, terminal config edits, palette style, trash, collage layouts, thumbnails, folder scanning and file watching. Run them with `./build.sh test`. |
 
 `NSWorkspace.setDesktopImageURL` only changes the wallpaper of the current Space. To cover every Space, `fandeck.py --set` writes the same entry that the "Show on all Spaces" option in System Settings writes, in `~/Library/Application Support/com.apple.wallpaper/Store/Index.plist`. It then restarts `WallpaperAgent` to load the change.
 
