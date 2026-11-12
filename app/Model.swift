@@ -19,6 +19,7 @@ final class AppModel: ObservableObject {
     @Published var busy = false
     @Published var status = ""
     @Published var collage = CollageDraft()
+    @Published var trashItems: [TrashItem] { didSet { try? Self.trashStore.save(trashItems) } }
     @Published var folders: [URL] {
         didSet {
             UserDefaults.standard.set(folders.map(\.path), forKey: "folders")
@@ -90,6 +91,7 @@ final class AppModel: ObservableObject {
     private init() {
         folders = (UserDefaults.standard.stringArray(forKey: "folders") ?? [defaultLibrary.path]).map { URL(fileURLWithPath: $0) }
         followSystem = UserDefaults.standard.object(forKey: "followSystem") as? Bool ?? true
+        trashItems = Self.trashStore.load()
         theme = UserDefaults.standard.string(forKey: "theme").flatMap(PaletteTheme.init) ?? .dark
         let schedule = ScheduleState.load()
         rules = schedule.rules
@@ -107,6 +109,7 @@ final class AppModel: ObservableObject {
         watchFolders()
         startTimer()
         registerShortcuts()
+        purgeTrash()
     }
 
     func reload() {
@@ -181,26 +184,6 @@ final class AppModel: ObservableObject {
             }
             reload()
             busy = false
-        }
-    }
-
-    /// Moves an image to the Trash, so it can still be put back from there
-    func trash(_ url: URL) {
-        if url.standardizedFileURL == current?.standardizedFileURL {
-            let alert = NSAlert()
-            alert.messageText = "Move your current wallpaper to the Trash?"
-            alert.informativeText = "\(url.lastPathComponent) stays on screen until you choose another wallpaper."
-            alert.addButton(withTitle: "Move to Trash")
-            alert.addButton(withTitle: "Cancel")
-            guard alert.runModal() == .alertFirstButtonReturn else { return }
-        }
-        do {
-            try FileManager.default.trashItem(at: url, resultingItemURL: nil)
-            wallpapers.removeAll { $0 == url }
-            collage.selected.removeAll { $0 == url }
-            status = "Moved \(url.lastPathComponent) to the Trash"
-        } catch {
-            status = "Error: \(error.localizedDescription)"
         }
     }
 

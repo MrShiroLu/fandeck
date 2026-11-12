@@ -178,6 +178,7 @@ struct GalleryView: View {
     @EnvironmentObject var model: AppModel
     @State private var picking = false
     @State private var showFolders = false
+    @State private var showTrash = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -188,6 +189,10 @@ struct GalleryView: View {
                 Spacer()
                 Button { model.scan() } label: { Image(systemName: "arrow.clockwise") }
                     .buttonStyle(.borderless).help("Rescan folders")
+                Button { showTrash = true } label: {
+                    Label(model.trashItems.isEmpty ? "Trash" : "Trash \(model.trashItems.count)", systemImage: "trash")
+                }
+                .popover(isPresented: $showTrash, arrowEdge: .bottom) { TrashView().environmentObject(model) }
                 Button { showFolders = true } label: { Label("Folders", systemImage: "folder") }
                     .popover(isPresented: $showFolders, arrowEdge: .bottom) {
                         FolderList().padding(16).frame(width: 460).environmentObject(model)
