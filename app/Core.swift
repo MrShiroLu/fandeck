@@ -1,6 +1,8 @@
 import AppKit
+import CryptoKit
 import ImageIO
 import SwiftUI
+import UniformTypeIdentifiers
 
 let home = FileManager.default.homeDirectoryForCurrentUser
 let walCache = home.appendingPathComponent(".cache/wal")
@@ -206,26 +208,132 @@ final class FolderWatcher {
 
 // MARK: - Image loading
 
-/// QuickLook fails to thumbnail some large PNGs; ImageIO handles all of them
+/// QuickLook fails to thumbnail some large PNGs; ImageIO handles all of them.
+/// Thumbnails are kept in memory and on disk, so each image is decoded once, not on every launch.
 enum ImageLoader {
-    private static let cache = NSCache<NSString, CGImage>()
+    private static let memory: NSCache<NSString, CGImage> = {
+        let cache = NSCache<NSString, CGImage>()
+        cache.totalCostLimit = 200 << 20 // bytes; a gallery thumbnail is about 0.6 MB
+        return cache
+    }()
 
+    /// Decoding a large PNG takes a core for a while; a few at a time keeps scrolling smooth
+    private static let queue: OperationQueue = {
+        let q = OperationQueue()
+        q.maxConcurrentOperationCount = max(2, ProcessInfo.processInfo.activeProcessorCount / 3)
+        q.qualityOfService = .userInitiated
+        return q
+    }()
+
+    /// Background fill of the disk cache, after the main queue so it never delays what's on screen
+    private static let prefetchQueue: OperationQueue = {
+        let q = OperationQueue()
+        q.maxConcurrentOperationCount = 2
+        q.qualityOfService = .utility
+        return q
+    }()
+
+    static var diskDirectory = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+        .appendingPathComponent(Bundle.main.bundleIdentifier ?? "Fandeck").appendingPathComponent("Thumbnails")
+
+    /// Decodes `url` scaled to fit `maxPixel`, in the pixel format the screen draws without converting
     static func load(_ url: URL, maxPixel: CGFloat) -> CGImage? {
         guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else { return nil }
         let options: [CFString: Any] = [kCGImageSourceCreateThumbnailFromImageAlways: true,
                                         kCGImageSourceCreateThumbnailWithTransform: true,
+                                        kCGImageSourceShouldCacheImmediately: true,
                                         kCGImageSourceThumbnailMaxPixelSize: Int(maxPixel)]
-        return CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary)
+        guard let image = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else { return nil }
+        return displayReady(image)
     }
 
-    /// Gallery thumbnails: generated once per file, size and modification date
+    /// Already loaded thumbnail, cheap enough to call while building a view
+    static func cached(_ url: URL, maxPixel: CGFloat) -> CGImage? {
+        memory.object(forKey: memoryKey(url, maxPixel))
+    }
+
+    /// Gallery thumbnail from memory, then disk, then the image itself
     static func thumbnail(_ url: URL, maxPixel: CGFloat) -> CGImage? {
-        let date = (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
-        let key = "\(url.path)#\(Int(maxPixel))#\(date?.timeIntervalSince1970 ?? 0)" as NSString
-        if let hit = cache.object(forKey: key) { return hit }
+        let key = memoryKey(url, maxPixel)
+        if let hit = memory.object(forKey: key) { return hit }
+        let file = diskFile(url, maxPixel)
+        if let source = CGImageSourceCreateWithURL(file as CFURL, nil),
+           let image = CGImageSourceCreateImageAtIndex(source, 0, [kCGImageSourceShouldCacheImmediately: true] as CFDictionary)
+                .flatMap(displayReady) {
+            memory.setObject(image, forKey: key, cost: image.bytesPerRow * image.height)
+            return image
+        }
         guard let image = load(url, maxPixel: maxPixel) else { return nil }
-        cache.setObject(image, forKey: key)
+        memory.setObject(image, forKey: key, cost: image.bytesPerRow * image.height)
+        save(image, to: file)
         return image
+    }
+
+    /// Off the main thread and queued; returns nil without decoding if the caller was cancelled while waiting,
+    /// which is what happens to cells that scroll out of view
+    static func thumbnail(_ url: URL, maxPixel: CGFloat) async -> CGImage? {
+        if let hit = cached(url, maxPixel: maxPixel) { return hit }
+        let cancelled = Flag()
+        return await withTaskCancellationHandler {
+            await withCheckedContinuation { continuation in
+                queue.addOperation {
+                    continuation.resume(returning: cancelled.isSet ? nil : thumbnail(url, maxPixel: maxPixel))
+                }
+            }
+        } onCancel: {
+            cancelled.set()
+        }
+    }
+
+    /// Writes missing thumbnails to the disk cache in the background, without keeping them in memory,
+    /// so the first scroll through a large folder reads small files instead of decoding full images
+    static func prefetch(_ urls: [URL], maxPixel: CGFloat) {
+        prefetchQueue.cancelAllOperations()
+        for url in urls {
+            prefetchQueue.addOperation {
+                let file = diskFile(url, maxPixel)
+                guard memory.object(forKey: memoryKey(url, maxPixel)) == nil,
+                      !FileManager.default.fileExists(atPath: file.path),
+                      let image = load(url, maxPixel: maxPixel) else { return }
+                save(image, to: file)
+            }
+        }
+    }
+
+    /// Named after the path, modification date, size and pixel size, so an edited image gets a new thumbnail
+    private static func diskFile(_ url: URL, _ maxPixel: CGFloat) -> URL {
+        let values = try? url.resourceValues(forKeys: [.contentModificationDateKey, .fileSizeKey])
+        let stamp = "\(url.path)|\(values?.contentModificationDate?.timeIntervalSince1970 ?? 0)|\(values?.fileSize ?? 0)|\(Int(maxPixel))"
+        return diskDirectory.appendingPathComponent(SHA256.hash(data: Data(stamp.utf8)).map { String(format: "%02x", $0) }.joined() + ".jpg")
+    }
+
+    private static func memoryKey(_ url: URL, _ maxPixel: CGFloat) -> NSString {
+        "\(url.path)#\(Int(maxPixel))" as NSString
+    }
+
+    /// Redraws into 32-bit BGRA, the format Core Animation draws directly; RGB JPEG and PNG data would be converted on every draw
+    private static func displayReady(_ image: CGImage) -> CGImage? {
+        guard let ctx = CGContext(data: nil, width: image.width, height: image.height, bitsPerComponent: 8, bytesPerRow: 0,
+                                  space: CGColorSpace(name: CGColorSpace.sRGB)!,
+                                  bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue)
+        else { return image }
+        ctx.interpolationQuality = .high
+        ctx.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
+        return ctx.makeImage() ?? image
+    }
+
+    private static func save(_ image: CGImage, to file: URL) {
+        try? FileManager.default.createDirectory(at: diskDirectory, withIntermediateDirectories: true)
+        guard let dest = CGImageDestinationCreateWithURL(file as CFURL, UTType.jpeg.identifier as CFString, 1, nil) else { return }
+        CGImageDestinationAddImage(dest, image, [kCGImageDestinationLossyCompressionQuality: 0.85] as CFDictionary)
+        CGImageDestinationFinalize(dest)
+    }
+
+    private final class Flag: @unchecked Sendable {
+        private let lock = NSLock()
+        private var value = false
+        var isSet: Bool { lock.withLock { value } }
+        func set() { lock.withLock { value = true } }
     }
 }
 

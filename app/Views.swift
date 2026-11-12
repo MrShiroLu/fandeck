@@ -4,9 +4,24 @@ import SwiftUI
 // MARK: - Shared views
 
 struct Thumbnail: View {
+    /// Gallery, collage and schedule thumbnails share this size, so one decode serves all three
+    static let standard = CGSize(width: 240, height: 150)
+    static var standardPixels: CGFloat { pixels(standard) }
+
     let url: URL
     let size: CGSize
     @State private var image: CGImage?
+
+    init(url: URL, size: CGSize = Thumbnail.standard) {
+        self.url = url
+        self.size = size
+        // Cells that scroll back into view show their image in the first frame instead of blinking empty
+        _image = State(initialValue: ImageLoader.cached(url, maxPixel: Self.pixels(size)))
+    }
+
+    private static func pixels(_ size: CGSize) -> CGFloat {
+        max(size.width, size.height) * (NSScreen.main?.backingScaleFactor ?? 2)
+    }
 
     var body: some View {
         // The frame comes from outside; the image must not drive layout, it is clipped into the box
@@ -16,9 +31,14 @@ struct Thumbnail: View {
             }
             .clipped()
         .task(id: url) {
+            let pixels = Self.pixels(size)
+            if let hit = ImageLoader.cached(url, maxPixel: pixels) {
+                image = hit
+                return
+            }
             image = nil
-            let pixels = max(size.width, size.height) * (NSScreen.main?.backingScaleFactor ?? 2)
-            image = await Task.detached(priority: .utility) { [url] in ImageLoader.thumbnail(url, maxPixel: pixels) }.value
+            // Cancelled when the cell leaves the screen, so its decode never starts
+            if let loaded = await ImageLoader.thumbnail(url, maxPixel: pixels), !Task.isCancelled { image = loaded }
         }
     }
 }
@@ -233,7 +253,7 @@ struct GalleryView: View {
                 ForEach(model.wallpapers, id: \.self) { url in
                     let selected = url.standardizedFileURL == model.current?.standardizedFileURL
                     Button { model.apply(url) } label: {
-                        Thumbnail(url: url, size: CGSize(width: 240, height: 150))
+                        Thumbnail(url: url)
                             .frame(height: 96)
                             .clipShape(RoundedRectangle(cornerRadius: 6))
                             .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(selected ? model.accent : .clear, lineWidth: 2))

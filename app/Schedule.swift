@@ -155,7 +155,7 @@ struct RuleRow: View {
     var body: some View {
         HStack(spacing: 14) {
             Button { picking = true } label: {
-                Thumbnail(url: rule.url, size: CGSize(width: 140, height: 88))
+                Thumbnail(url: rule.url)
                     .frame(width: 96, height: 60)
                     .clipShape(RoundedRectangle(cornerRadius: 6))
             }
@@ -251,7 +251,7 @@ struct WallpaperPicker: View {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 110), spacing: 8)], spacing: 8) {
                     ForEach(model.wallpapers, id: \.self) { url in
                         Button { onPick(url) } label: {
-                            Thumbnail(url: url, size: CGSize(width: 160, height: 100))
+                            Thumbnail(url: url)
                                 .frame(height: 66)
                                 .clipShape(RoundedRectangle(cornerRadius: 5))
                                 .contentShape(Rectangle())

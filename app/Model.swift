@@ -127,6 +127,7 @@ final class AppModel: ObservableObject {
             if !Task.isCancelled {
                 wallpapers = found
                 scanning = false
+                ImageLoader.prefetch(found, maxPixel: Thumbnail.standardPixels)
                 checkShuffle()
             }
         }

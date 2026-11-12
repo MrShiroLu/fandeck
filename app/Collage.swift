@@ -224,7 +224,7 @@ struct CollageView: View {
             ForEach(model.wallpapers, id: \.self) { url in
                 let index = selected.firstIndex(of: url)
                 Button { toggle(url) } label: {
-                    Thumbnail(url: url, size: CGSize(width: 200, height: 125))
+                    Thumbnail(url: url)
                         .frame(height: 82)
                         .clipShape(RoundedRectangle(cornerRadius: 6))
                         .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(index != nil ? model.accent : .clear, lineWidth: 2))
