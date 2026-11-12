@@ -40,6 +40,7 @@ struct Tests {
         shortcuts()
         terminalConfig()
         palette()
+        menuBarIcon()
         collageLayouts()
         files(in: dir)
 
@@ -133,6 +134,17 @@ struct Tests {
         }
         check(make("#F2EEE8").isLight && !make("#1F0D14").isLight, "a light background makes a light palette, a dark one does not")
         check(PaletteTheme(rawValue: "auto") == .auto && PaletteTheme.light.label == "Light", "palette styles match the script's --theme values")
+    }
+
+    static func menuBarIcon() {
+        let image = MenuBarIcon.image
+        let scales = image.representations.map { Int($0.pixelsWide) / Int(MenuBarIcon.size) }.sorted()
+        check(image.isTemplate && scales == [1, 2, 3], "menu bar icon is a template with 1x, 2x and 3x bitmaps")
+        let rep = image.representations.compactMap { $0 as? NSBitmapImageRep }.first { $0.pixelsWide == 36 }!
+        var ink = 0, center = rep.colorAt(x: 7, y: 36 - 6)?.alphaComponent ?? 1
+        for x in 0..<36 { for y in 0..<36 where (rep.colorAt(x: x, y: y)?.alphaComponent ?? 0) > 0.5 { ink += 1 } }
+        check(ink > 200 && ink < 1000, "menu bar icon covers part of its box (\(ink) of 1296 pixels)")
+        check(center < 0.1, "the pivot rivet is cut out of the icon")
     }
 
     static func collageLayouts() {
