@@ -265,6 +265,8 @@ struct GalleryView: View {
                     .contextMenu {
                         Button("Apply") { model.apply(url) }
                         Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([url]) }
+                        Divider()
+                        Button("Move to Trash") { model.trash(url) }
                     }
                 }
             }

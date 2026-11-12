@@ -184,6 +184,26 @@ final class AppModel: ObservableObject {
         }
     }
 
+    /// Moves an image to the Trash, so it can still be put back from there
+    func trash(_ url: URL) {
+        if url.standardizedFileURL == current?.standardizedFileURL {
+            let alert = NSAlert()
+            alert.messageText = "Move your current wallpaper to the Trash?"
+            alert.informativeText = "\(url.lastPathComponent) stays on screen until you choose another wallpaper."
+            alert.addButton(withTitle: "Move to Trash")
+            alert.addButton(withTitle: "Cancel")
+            guard alert.runModal() == .alertFirstButtonReturn else { return }
+        }
+        do {
+            try FileManager.default.trashItem(at: url, resultingItemURL: nil)
+            wallpapers.removeAll { $0 == url }
+            collage.selected.removeAll { $0 == url }
+            status = "Moved \(url.lastPathComponent) to the Trash"
+        } catch {
+            status = "Error: \(error.localizedDescription)"
+        }
+    }
+
     func applyRandom() {
         if let url = Shuffle.pick(from: wallpapers, current: current, history: history) { apply(url) }
     }
